@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # PropVal Insights - Mumbai Property Valuation
 
 Flask web app that estimates Mumbai flat prices with a scikit-learn model, trained on
@@ -56,3 +57,7 @@ Production: `APP_ENV=production`, set `SECRET_KEY`, run `gunicorn run:app`.
 pip install -r requirements-dev.txt
 pytest
 ```
+=======
+# mumbai-property-predictor
+PropVal Insights is a machine learning-based web application that predicts property prices in Mumbai using historical property data and relevant features.
+>>>>>>> c6f5be65880ba7df6ab798e5b37741fcf0be1746

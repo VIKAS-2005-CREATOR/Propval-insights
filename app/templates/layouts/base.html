@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" style="scroll-behavior: smooth;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="PropVal Insights — Instant, data-driven property valuations for Mumbai real estate.">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}PropVal Insights — Mumbai Property Valuations{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/extras.css') }}">
+    {% block head %}{% endblock %}
+    <script>
+        try {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        } catch (e) { /* storage unavailable, keep the light theme */ }
+    </script>
+</head>
+<body>
+
+<button class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-controls="navLinks">
+    <i class="fa-solid fa-bars"></i>
+</button>
+
+<nav class="glass-nav" id="navbar">
+    <a class="nav-brand" href="{{ url_for('main.index') }}">
+        <i class="fa-solid fa-house-signal"></i> PropVal Insights
+    </a>
+    <div class="nav-links" id="navLinks">
+        {% if current_user.is_authenticated %}
+            <a class="nav-link" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+        {% else %}
+            <a class="nav-link" href="{{ url_for('auth.login') }}"><i class="fa-solid fa-user"></i> Login</a>
+        {% endif %}
+
+        <a class="nav-link btn-primary" href="{{ url_for('main.index') }}#predictor" style="justify-content: center; width: 100%; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-bolt"></i> Get Valuation
+        </a>
+
+        <a class="nav-link" href="{{ url_for('main.trends') }}"><i class="fa-solid fa-chart-line"></i> Market Trends</a>
+        <a class="nav-link" href="{{ url_for('main.compare') }}"><i class="fa-solid fa-code-compare"></i> Compare Properties</a>
+        <a class="nav-link" href="{{ url_for('main.performance') }}"><i class="fa-solid fa-chart-simple"></i> Performance</a>
+        <a class="nav-link" href="{{ url_for('main.how_it_works') }}"><i class="fa-solid fa-circle-question"></i> How It Works</a>
+        <a class="nav-link" href="{{ url_for('main.about') }}"><i class="fa-solid fa-info-circle"></i> About</a>
+
+        {% if current_user.is_authenticated %}
+            <a class="nav-link" href="{{ url_for('main.history') }}" style="margin-top: 1rem;">
+                <i class="fa-solid fa-clock-rotate-left"></i> History
+            </a>
+            {% if current_user.is_admin %}
+                <a class="nav-link" href="{{ url_for('admin.admin') }}">
+                    <i class="fa-solid fa-shield"></i> Admin
+                </a>
+            {% endif %}
+        {% endif %}
+        <button id="themeToggle" class="nav-link" style="background:none; border:none; width:100%; text-align:left; cursor:pointer; margin-top: 1.5rem; font-family:inherit; font-size:inherit; color:var(--text-muted);">
+            <i class="fa-solid fa-moon"></i> <span>Dark Mode</span>
+        </button>
+    </div>
+</nav>
+
+<main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}" role="alert">
+                <i class="fa-solid {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-circle-exclamation{% else %}fa-info-circle{% endif %}"></i>
+                {{ message }}
+                <button class="alert-close" type="button" aria-label="Dismiss">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <h3><i class="fa-solid fa-house-signal"></i> PropVal Insights</h3>
+            <p>AI-driven real estate valuations powered by historical property listing data from across Mumbai.</p>
+            <a href="{{ url_for('main.index') }}#predictor" class="btn-primary" style="margin-top: 1rem; display: inline-flex; width: fit-content;">
+                <i class="fa-solid fa-bolt"></i> Get Valuation Now
+            </a>
+        </div>
+
+        <div>
+            <h4>Links</h4>
+            <div class="footer-links">
+                <a href="{{ url_for('main.how_it_works') }}"><i class="fa-solid fa-circle-question"></i> How It Works</a>
+                <a href="{{ url_for('main.about') }}"><i class="fa-solid fa-info-circle"></i> About</a>
+                {% if config.SOURCE_CODE_URL %}<a href="{{ config.SOURCE_CODE_URL }}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github"></i> Source Code</a>{% endif %}
+                {% if config.DATASET_URL %}<a href="{{ config.DATASET_URL }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-database"></i> Dataset</a>{% endif %}
+            </div>
+        </div>
+        
+        <div>
+            <h4>Legal & Contact</h4>
+            <div class="footer-links">
+                {% if config.CONTACT_EMAIL %}<a href="mailto:{{ config.CONTACT_EMAIL }}"><i class="fa-solid fa-envelope"></i> Contact</a>{% endif %}
+                <a href="{{ url_for('main.privacy') }}"><i class="fa-solid fa-shield-halved"></i> Privacy Policy</a>
+                <a href="{{ url_for('main.terms') }}"><i class="fa-solid fa-file-contract"></i> Terms of Service</a>
+            </div>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>⚠️ <strong>Disclaimer:</strong> Predictions are statistical estimates based on historical data and are not official legal appraisals or financial advice.</p>
+        <p>&copy; 2026 PropVal Insights. All rights reserved.</p>
+    </div>
+</footer>
+
+<script>
+    // Hamburger toggle
+    const hamburger = document.getElementById('hamburger');
+    const navbar    = document.getElementById('navbar');
+    if (hamburger && navbar) {
+        hamburger.addEventListener('click', () => {
+            const isOpen = navbar.classList.toggle('open');
+            hamburger.setAttribute('aria-expanded', String(isOpen));
+        });
+    }
+    // Close flash alerts
+    document.querySelectorAll('.alert-close').forEach(btn => {
+        btn.addEventListener('click', () => btn.closest('.alert').remove());
+    });
+    // Dark mode toggle
+    function safeStore(key, value) {
+        try { localStorage.setItem(key, value); } catch (e) { /* storage unavailable */ }
+    }
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle ? themeToggle.querySelector('i') : null;
+    const themeText = themeToggle ? themeToggle.querySelector('span') : null;
+
+    function applyThemeState(isDark) {
+        if (isDark) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            if (themeIcon) themeIcon.classList.replace('fa-moon', 'fa-sun');
+            if (themeText) themeText.textContent = 'Light Mode';
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+            if (themeIcon) themeIcon.classList.replace('fa-sun', 'fa-moon');
+            if (themeText) themeText.textContent = 'Dark Mode';
+        }
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { isDark } }));
+    }
+
+    if (themeToggle) {
+        if (document.documentElement.getAttribute('data-theme') === 'dark') {
+            if (themeIcon) themeIcon.classList.replace('fa-moon', 'fa-sun');
+            if (themeText) themeText.textContent = 'Light Mode';
+        }
+        themeToggle.addEventListener('click', () => {
+            const isDarkNow = document.documentElement.getAttribute('data-theme') === 'dark';
+            const willBeDark = !isDarkNow;
+            safeStore('theme', willBeDark ? 'dark' : 'light');
+            applyThemeState(willBeDark);
+        });
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'theme') {
+                applyThemeState(e.newValue === 'dark');
+            }
+        });
+    }
+</script>
+
+
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

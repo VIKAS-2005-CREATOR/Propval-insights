@@ -1,0 +1,65 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2><i class="fa-solid fa-clock-rotate-left"></i> Valuation History</h2>
+        <p>Your most recent valuations made while logged in (latest 200).</p>
+    </div>
+    <a href="{{ url_for('main.index') }}#predictor" class="btn-primary">
+        <i class="fa-solid fa-plus"></i> New Valuation
+    </a>
+</div>
+
+{% if valuations %}
+<div class="glass-panel table-card">
+    <div style="overflow-x:auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Property</th>
+                    <th>Location</th>
+                    <th>Status / Age</th>
+                    <th>Predicted Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in valuations %}
+                <tr>
+                    <td class="td-muted">
+                        <i class="fa-regular fa-calendar"></i>
+                        {{ r.timestamp.strftime('%d %b %Y') }}<br>
+                        <small>{{ r.timestamp.strftime('%H:%M') }} UTC</small>
+                    </td>
+                    <td>
+                        <strong>{{ r.bhk }} BHK {{ r.prop_type }}</strong><br>
+                        <small class="td-muted"><i class="fa-solid fa-ruler"></i> {{ r.carpet_area|int }} sq ft</small>
+                    </td>
+                    <td>
+                        <i class="fa-solid fa-location-dot" style="color:var(--primary)"></i>
+                        {{ r.region }}
+                    </td>
+                    <td>
+                        <span class="badge badge-blue">{{ r.status }}</span><br>
+                        <small class="td-muted">{{ r.age }}</small>
+                    </td>
+                    <td>
+                        <span class="price-cell">₹{{ '{:,.2f}'.format(r.predicted_price) }} Cr</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="glass-panel empty-page">
+    <i class="fa-solid fa-magnifying-glass-chart empty-big-icon"></i>
+    <h3>No history yet</h3>
+    <p>Run a valuation and it will be saved here automatically.</p>
+    <a href="{{ url_for('main.index') }}#predictor" class="btn-primary" style="margin-top:1rem;">
+        <i class="fa-solid fa-bolt"></i> Get Started
+    </a>
+</div>
+{% endif %}
+{% endblock %}

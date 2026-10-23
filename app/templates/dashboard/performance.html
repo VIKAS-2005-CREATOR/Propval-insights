@@ -1,0 +1,68 @@
+{% extends "layouts/base.html" %}
+{% block title %}Model Performance - PropVal Insights{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="section" id="performance">
+    <h2 class="section-title">Model Performance</h2>
+    <p class="section-sub">
+        Five algorithms were benchmarked. Currently serving
+        <strong>{{ model_scores.best_model if model_scores and model_scores.best_model else 'no model yet' }}</strong>.
+        Scores below are R² on a held-out test set that was never used for model selection.
+    </p>
+
+    {% set best = model_scores.best_metrics if model_scores else none %}
+    {% if best %}
+    <div class="perf-grid" style="margin-bottom: 1.5rem;">
+        <div class="perf-card perf-best">
+            <div class="perf-name">Mean absolute error</div>
+            <div class="perf-score">₹{{ '%.2f'|format(best.mae_cr) }} Cr</div>
+            <div class="perf-label">on test data</div>
+        </div>
+        <div class="perf-card">
+            <div class="perf-name">Typical error</div>
+            <div class="perf-score">{{ '%.1f'|format(best.mape_pct) }}%</div>
+            <div class="perf-label">mean absolute % error</div>
+        </div>
+        <div class="perf-card">
+            <div class="perf-name">Training rows</div>
+            <div class="perf-score">{{ '{:,}'.format(best.n_rows) }}</div>
+            <div class="perf-label">after cleaning</div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if model_scores and model_scores.models %}
+    <div class="perf-grid">
+        {% for name, train_score in model_scores.models.items() %}
+        <div class="perf-card {% if name == model_scores.best_model %}perf-best{% endif %}">
+            {% if name == model_scores.best_model %}<span class="best-badge">BEST</span>{% endif %}
+            <div class="perf-name">{{ name }}</div>
+            {% if model_scores.test_scores and name in model_scores.test_scores %}
+            <div class="perf-score">{{ '%.1f'|format(model_scores.test_scores[name] * 100) }}%</div>
+            <div class="perf-label">Test R²</div>
+            {% elif model_scores.cv_scores and name in model_scores.cv_scores %}
+            <div class="perf-score">{{ '%.1f'|format(model_scores.cv_scores[name] * 100) }}%</div>
+            <div class="perf-label">Cross-validated R²</div>
+            {% else %}
+            <div class="perf-score">&mdash;</div>
+            <div class="perf-label">Retrain to see metrics</div>
+            {% endif %}
+            <div class="perf-cv">
+                {% if model_scores.cv_scores and name in model_scores.cv_scores %}CV: {{ '%.1f'|format(model_scores.cv_scores[name] * 100) }}%{% endif %}
+                · Train (overfit check): {{ '%.1f'|format(train_score * 100) }}%
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state glass-panel">
+        <div class="empty-icon"><i class="fa-solid fa-chart-line"></i></div>
+        <h3>No Performance Data Available</h3>
+        <p>Run <code>python ml_pipeline/train.py</code> to generate the model metrics.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - PropVal Insights</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+        try {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        } catch (e) { /* storage unavailable, keep the light theme */ }
+    </script>
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <style>
+        /* Override body padding for standalone auth pages */
+        body { padding-left: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .back-home { position: absolute; top: 2rem; left: 2rem; color: var(--text-muted); text-decoration: none; font-weight: 600; transition: color 0.3s ease; }
+        .back-home:hover { color: var(--primary); }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('main.index') }}" class="back-home"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+    <button id="authThemeToggle" class="auth-theme-toggle" aria-label="Toggle theme">
+        <i class="fa-solid fa-moon"></i>
+    </button>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages" style="position: absolute; top: 1rem; right: 1rem; z-index: 1000;">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="auth-wrap">
+        <div class="auth-card glass-panel">
+            <div class="auth-icon"><i class="fa-solid fa-house-signal"></i></div>
+            <h2 class="auth-title">Create Account</h2>
+            <p class="auth-sub">Join PropVal Insights for smarter property insights and saved history.</p>
+
+            <form method="POST" action="{{ url_for('auth.register') }}" class="auth-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label class="label" for="username">Username</label>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-user input-icon"></i>
+                        <input type="text" class="input input-with-icon" id="username" name="username"
+                               placeholder="min 3 characters" required minlength="3" maxlength="64" autocomplete="username">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="label" for="email">Email Address</label>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-envelope input-icon"></i>
+                        <input type="email" class="input input-with-icon" id="email" name="email"
+                               placeholder="you@example.com" required autocomplete="email">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="label" for="password">Password</label>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" class="input input-with-icon" id="password" name="password"
+                               placeholder="min 8 characters" required minlength="8" autocomplete="new-password">
+                    </div>
+                <div class="form-group" style="margin-top: 1rem; display: flex; align-items: flex-start; gap: 0.5rem; text-align: left;">
+                    <input type="checkbox" id="terms" name="terms" required style="margin-top: 0.25rem;">
+                    <label for="terms" style="font-size: 0.85rem; color: var(--text-muted); cursor: pointer; line-height: 1.4;">
+                        I agree to the <a href="{{ url_for('main.terms') }}" target="_blank" style="color: var(--primary);">Terms of Service</a> and <a href="{{ url_for('main.privacy') }}" target="_blank" style="color: var(--primary);">Privacy Policy</a>
+                    </label>
+                </div>
+                <button type="submit" class="btn-primary auth-btn">
+                    <i class="fa-solid fa-user-plus"></i> Create Account
+                </button>
+            </form>
+
+            <p class="auth-footer">
+                Already have an account? <a href="{{ url_for('auth.login') }}">Log in here</a>
+            </p>
+        </div>
+    </div>
+    <script>
+        const toggle = document.getElementById('authThemeToggle');
+        const icon = toggle ? toggle.querySelector('i') : null;
+        if (toggle && icon) {
+            if (document.documentElement.getAttribute('data-theme') === 'dark') {
+                icon.classList.replace('fa-moon', 'fa-sun');
+            }
+            toggle.addEventListener('click', () => {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                if (isDark) {
+                    document.documentElement.removeAttribute('data-theme');
+                    try { localStorage.setItem('theme', 'light'); } catch(e){}
+                    icon.classList.replace('fa-sun', 'fa-moon');
+                } else {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    try { localStorage.setItem('theme', 'dark'); } catch(e){}
+                    icon.classList.replace('fa-moon', 'fa-sun');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

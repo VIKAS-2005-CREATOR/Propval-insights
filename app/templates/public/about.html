@@ -1,0 +1,38 @@
+{% extends "layouts/base.html" %}
+{% block title %}About - PropVal Insights{% endblock %}
+
+{% block content %}
+<div class="glass-panel" style="max-width: 800px; margin: 2rem auto; padding: 2rem;">
+    <h1 style="margin-bottom: 1.5rem; font-size: 1.8rem;">About PropVal Insights</h1>
+    
+    <div style="line-height: 1.7; color: var(--text-color);">
+        <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.3rem; margin-bottom: 0.8rem; color: var(--primary);">The Idea Behind PropVal Insights</h2>
+            <p>Finding accurate and up-to-date property prices in Mumbai is often a tedious and opaque process. The idea behind PropVal Insights was to create a fast, data-driven, and accessible platform that leverages historical listing data and machine learning to give users an instant, realistic estimate of property values in one of the most complex real estate markets in the world.</p>
+        </section>
+
+        <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.3rem; margin-bottom: 0.8rem; color: var(--primary);">The Problems It Targets</h2>
+            <ul style="margin-left: 1.5rem;">
+                <li style="margin-bottom: 0.5rem;"><strong>Time-Consuming Research:</strong> Manually comparing properties across different localities, adjusting for age, and determining a fair value can take days of effort.</li>
+                <li style="margin-bottom: 0.5rem;"><strong>Lack of Transparency:</strong> Many valuation platforms hide their methodology or rely heavily on unverified factors rather than hard data.</li>
+            </ul>
+        </section>
+
+        <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.3rem; margin-bottom: 0.8rem; color: var(--primary);">How It Solves Them</h2>
+            <ul style="margin-left: 1.5rem;">
+                <li style="margin-bottom: 0.5rem;"><strong>Data-Driven Estimates:</strong> By training a machine learning model on thousands of real historical listings (currently {{ num_listings }} listings across {{ num_regions }} localities), PropVal Insights grounds its estimates in actual market trends rather than speculation.</li>
+                <li style="margin-bottom: 0.5rem;"><strong>Instant Insights:</strong> Users can retrieve a property's estimated value in seconds by simply inputting key features like locality, BHK configuration, and area.</li>
+                <li style="margin-bottom: 0.5rem;"><strong>Transparent Adjustments:</strong> The platform openly displays how factors like building age and transit proximity influence the final valuation, giving users a clear view of the underlying logic.</li>
+            </ul>
+        </section>
+        
+        {% if config.CONTACT_EMAIL %}
+        <section>
+            <p>For inquiries, please contact: <a href="mailto:{{ config.CONTACT_EMAIL }}" style="color: var(--primary); text-decoration: underline;">{{ config.CONTACT_EMAIL }}</a></p>
+        </section>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

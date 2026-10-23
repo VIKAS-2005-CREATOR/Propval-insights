@@ -1,0 +1,165 @@
+{% extends "layouts/base.html" %}
+{% block title %}Compare Properties - PropVal Insights{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{# One form card per property (prefix p1 / p2). `categories` is passed in explicitly. #}
+{% macro property_form(prefix, p, title, accent, categories) %}
+<div class="glass-panel compare-card-{{ prefix }}" style="padding: 1.75rem;">
+    <h3 style="margin: 0 0 1.25rem; font-size: 1.15rem;">{{ title }}</h3>
+
+    <div class="form-group">
+        <label class="label" for="{{ prefix }}_region">Location</label>
+        <select class="input" id="{{ prefix }}_region" name="{{ prefix }}_region" required>
+            {% for r in categories.regions %}
+            <option value="{{ r }}" {% if p.region == r %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="two-col">
+        <div class="form-group">
+            <label class="label" for="{{ prefix }}_bhk">BHK</label>
+            <select class="input" id="{{ prefix }}_bhk" name="{{ prefix }}_bhk" required>
+                {% for i in range(1, 11) %}
+                <option value="{{ i }}" {% if p.bhk|int == i %}selected{% endif %}>{{ i }} BHK</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="label" for="{{ prefix }}_area">Carpet area (sq ft)</label>
+            <input type="number" class="input" id="{{ prefix }}_area" name="{{ prefix }}_area"
+                   min="100" max="10000" value="{{ p.area }}" required>
+        </div>
+    </div>
+
+    <div class="two-col">
+        <div class="form-group">
+            <label class="label" for="{{ prefix }}_prop_type">Type</label>
+            <select class="input" id="{{ prefix }}_prop_type" name="{{ prefix }}_prop_type" required>
+                {% for t in categories.types %}
+                <option value="{{ t }}" {% if p.prop_type == t %}selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="label" for="{{ prefix }}_status">Status</label>
+            <select class="input" id="{{ prefix }}_status" name="{{ prefix }}_status" required>
+                {% for s in categories.statuses %}
+                <option value="{{ s }}" {% if p.status == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 0;">
+        <label class="label" for="{{ prefix }}_age">Property age</label>
+        <select class="input" id="{{ prefix }}_age" name="{{ prefix }}_age" required>
+            {% for a in categories.ages %}
+            <option value="{{ a }}" {% if p.age == a %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 2rem;">
+    <div>
+        <h2><i class="fa-solid fa-code-compare"></i> Compare Two Properties</h2>
+        <p>Estimate two flats side by side. The page address is shareable.</p>
+    </div>
+    <a href="{{ url_for('main.index') }}" class="btn-outline">
+        <i class="fa-solid fa-arrow-left"></i> Back to Valuation
+    </a>
+</div>
+
+<form method="GET" action="{{ url_for('main.compare') }}">
+    <div class="compare-grid">
+        {{ property_form('p1', p1, 'Property A', '#2563eb', categories) }}
+        {{ property_form('p2', p2, 'Property B', '#8b5cf6', categories) }}
+    </div>
+    <button type="submit" class="btn-primary btn-submit" style="margin-top: 1.5rem;">
+        <i class="fa-solid fa-scale-balanced"></i> Compare
+    </button>
+</form>
+
+{% if p1_error or p2_error %}
+<div class="form-error" role="alert">
+    {% if p1_error %}<div><strong>Property A:</strong> {{ p1_error }}</div>{% endif %}
+    {% if p2_error %}<div><strong>Property B:</strong> {{ p2_error }}</div>{% endif %}
+</div>
+{% endif %}
+
+{% if p1_data and p2_data %}
+{% set a = p1_data %}
+{% set b = p2_data %}
+<div class="glass-panel table-card" style="margin-top: 2rem;">
+    <div class="table-meta">
+        <h3 style="margin: 0; font-size: 1.1rem;"><i class="fa-solid fa-table"></i> Side-by-side</h3>
+    </div>
+    <div style="overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr><th></th><th>Property A</th><th>Property B</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="td-muted">Flat</td>
+                    <td>{{ a.inputs.bhk }} BHK · {{ '{:,.0f}'.format(a.inputs.area) }} sq ft · {{ a.inputs.region }}</td>
+                    <td>{{ b.inputs.bhk }} BHK · {{ '{:,.0f}'.format(b.inputs.area) }} sq ft · {{ b.inputs.region }}</td>
+                </tr>
+                <tr>
+                    <td class="td-muted">Estimated price</td>
+                    <td><strong>₹{{ '{:,.2f}'.format(a.predicted_price) }} Cr</strong></td>
+                    <td><strong>₹{{ '{:,.2f}'.format(b.predicted_price) }} Cr</strong></td>
+                </tr>
+                <tr>
+                    <td class="td-muted">90% range</td>
+                    <td>{% if a.price_low %}₹{{ '{:,.2f}'.format(a.price_low) }} to ₹{{ '{:,.2f}'.format(a.price_high) }} Cr{% else %}&mdash;{% endif %}</td>
+                    <td>{% if b.price_low %}₹{{ '{:,.2f}'.format(b.price_low) }} to ₹{{ '{:,.2f}'.format(b.price_high) }} Cr{% else %}&mdash;{% endif %}</td>
+                </tr>
+                <tr>
+                    <td class="td-muted">Price per sq ft</td>
+                    <td>₹{{ a.price_per_sqft|inr }}</td>
+                    <td>₹{{ b.price_per_sqft|inr }}</td>
+                </tr>
+                <tr>
+                    <td class="td-muted">Listings in area</td>
+                    <td>{{ a.region_listings if a.region_listings is not none else '?' }}{% if a.low_data %} <span class="badge badge-orange">limited data</span>{% endif %}</td>
+                    <td>{{ b.region_listings if b.region_listings is not none else '?' }}{% if b.low_data %} <span class="badge badge-orange">limited data</span>{% endif %}</td>
+                </tr>
+                <tr>
+                    <td class="td-muted">Stamp duty ({{ '%.0f'|format(a.money.costs.stamp_duty_rate * 100) }}%)</td>
+                    <td>₹{{ a.money.costs.stamp_duty|inr }}</td>
+                    <td>₹{{ b.money.costs.stamp_duty|inr }}</td>
+                </tr>
+                <tr>
+                    <td class="td-muted">All-in purchase cost</td>
+                    <td>₹{{ '{:,.2f}'.format(a.money.costs.total / 10000000) }} Cr</td>
+                    <td>₹{{ '{:,.2f}'.format(b.money.costs.total / 10000000) }} Cr</td>
+                </tr>
+                <tr>
+                    <td class="td-muted">Rent scenario ({{ '%.1f'|format(a.money.rent.yield_pct) }}% yield)</td>
+                    <td>₹{{ a.money.rent.monthly|inr }} / month</td>
+                    <td>₹{{ b.money.rent.monthly|inr }} / month</td>
+                </tr>
+                {% set last_a = a.money.growth.rows|last %}
+                {% set last_b = b.money.growth.rows|last %}
+                <tr>
+                    <td class="td-muted">After {{ last_a.years }} years ({{ '%.0f'|format(a.money.growth.annual_growth_pct) }}%/yr, illustrative)</td>
+                    <td>₹{{ '{:,.2f}'.format(last_a.value_cr) }} Cr</td>
+                    <td>₹{{ '{:,.2f}'.format(last_b.value_cr) }} Cr</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<p style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+    Rent, growth and purchase-cost rows use the assumptions set in the app settings and are not forecasts.
+    Open each flat in the <a href="{{ url_for('main.index') }}">valuation form</a> for the full breakdown.
+</p>
+{% endif %}
+{% endblock %}

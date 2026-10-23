@@ -1,0 +1,153 @@
+{% extends "layouts/base.html" %}
+{% block title %}Market Trends - PropVal Insights{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<style>
+    .trends-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
+    .trend-card { padding: 1.5rem; }
+    .trend-header { margin-bottom: 1.5rem; }
+    .trend-title { font-size: 1.25rem; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+    .hero-trends { padding: 2rem 1rem; text-align: center; }
+    @media (max-width: 768px) { .trends-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero-trends" id="trends-hero">
+    <div class="hero-badge" style="margin: 0 auto 1.5rem;">
+        <i class="fa-solid fa-chart-line"></i> Dataset Analytics
+    </div>
+    <h1 class="hero-headline">Mumbai Market <span class="gradient-text">Trends</span></h1>
+    <p class="hero-sub" style="margin-left:auto; margin-right:auto;">
+        Pricing averages and inventory distribution across Mumbai, based on
+        <strong>{{ '{:,}'.format(market_data.total_listings) if market_data and market_data.total_listings else 0 }}</strong>
+        listings in the dataset.
+    </p>
+</section>
+
+<section class="section">
+    {% if not market_data or not market_data.region_trends %}
+    <div class="empty-state glass-panel">
+        <div class="empty-icon"><i class="fa-solid fa-chart-bar"></i></div>
+        <h3>No Trend Data Available</h3>
+        <p>The dataset could not be loaded. Check that <code>data/raw/mumbai_properties.csv</code> exists.</p>
+    </div>
+    {% else %}
+    <div class="trends-grid">
+        <div class="glass-panel trend-card" style="grid-column: 1 / -1;">
+            <div class="trend-header">
+                <h3 class="trend-title"><i class="fa-solid fa-map-location-dot"></i> Top 10 Most Expensive Regions</h3>
+            </div>
+            <div style="height: 350px; position: relative;"><canvas id="regionChart"></canvas></div>
+        </div>
+
+        <div class="glass-panel trend-card">
+            <div class="trend-header">
+                <h3 class="trend-title"><i class="fa-solid fa-bed"></i> Average Price by Configuration</h3>
+            </div>
+            <div style="height: 250px; position: relative;"><canvas id="bhkChart"></canvas></div>
+        </div>
+
+        <div class="glass-panel trend-card">
+            <div class="trend-header">
+                <h3 class="trend-title"><i class="fa-solid fa-building"></i> Inventory Distribution</h3>
+            </div>
+            <div style="height: 250px; position: relative;"><canvas id="typeChart"></canvas></div>
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if market_data and market_data.region_trends %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script id="d-trends" type="application/json">{{ market_data | tojson }}</script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const trends = JSON.parse(document.getElementById('d-trends').textContent);
+
+        let regionChart = null;
+        let bhkChart = null;
+        let typeChart = null;
+
+        function renderTrendsCharts() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const GRID = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(100, 116, 139, 0.15)';
+            const TICK = isDark ? '#94a3b8' : '#64748b';
+
+            const AXES = {
+                y: { beginAtZero: true, grid: { color: GRID }, ticks: { color: TICK } },
+                x: { grid: { display: false }, ticks: { color: TICK } }
+            };
+
+            const regionEl = document.getElementById('regionChart');
+            if (regionEl) {
+                if (regionChart) regionChart.destroy();
+                regionChart = new Chart(regionEl.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: trends.region_trends.labels,
+                        datasets: [{
+                            label: 'Average Price (Cr)',
+                            data: trends.region_trends.data,
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: AXES }
+                });
+            }
+
+            const bhkEl = document.getElementById('bhkChart');
+            if (bhkEl) {
+                if (bhkChart) bhkChart.destroy();
+                bhkChart = new Chart(bhkEl.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: trends.bhk_trends.labels,
+                        datasets: [{
+                            label: 'Average Price (Cr)',
+                            data: trends.bhk_trends.data,
+                            borderColor: '#10b981',
+                            backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#10b981',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: AXES }
+                });
+            }
+
+            const typeEl = document.getElementById('typeChart');
+            if (typeEl) {
+                if (typeChart) typeChart.destroy();
+                typeChart = new Chart(typeEl.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: trends.type_dist.labels,
+                        datasets: [{
+                            data: trends.type_dist.data,
+                            backgroundColor: ['#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#64748b'],
+                            borderWidth: 0,
+                            cutout: '70%',
+                            hoverOffset: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right', labels: { color: TICK, usePointStyle: true } } }
+                    }
+                });
+            }
+        }
+
+        renderTrendsCharts();
+        window.addEventListener('themeChanged', renderTrendsCharts);
+    });
+</script>
+{% endif %}
+{% endblock %}

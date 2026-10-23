@@ -1,0 +1,56 @@
+{
+  "best_model": "Gradient Boosting",
+  "trained_at": "23 Oct 2026",
+  "models": {
+    "Linear Regression": -3.2008,
+    "Ridge Regression": -3.232,
+    "Lasso Regression": -3.227,
+    "Random Forest": 0.9284,
+    "Gradient Boosting": 0.8942
+  },
+  "cv_scores": {
+    "Linear Regression": -2.8939,
+    "Ridge Regression": -2.9284,
+    "Lasso Regression": -2.9207,
+    "Random Forest": 0.8631,
+    "Gradient Boosting": 0.8651
+  },
+  "test_scores": {
+    "Linear Regression": -543.3637,
+    "Ridge Regression": -553.2113,
+    "Lasso Regression": -553.4734,
+    "Random Forest": 0.8559,
+    "Gradient Boosting": 0.8654
+  },
+  "metrics": {
+    "r2": 0.8654,
+    "test_r2": 0.8654,
+    "mae_lakh": 34.08,
+    "rmse_lakh": 94.07,
+    "mae_cr": 0.341,
+    "rmse_cr": 0.941,
+    "mape_pct": 18.15
+  },
+  "best_metrics": {
+    "test_r2": 0.8654,
+    "mae_cr": 0.341,
+    "mape_pct": 18.15,
+    "interval": {
+      "low": 0.696,
+      "high": 1.449
+    },
+    "interval_sparse": {
+      "low": 0.572,
+      "high": 1.72
+    },
+    "min_region_listings": 30,
+    "n_rows": 52160
+  },
+  "prediction_interval": {
+    "confidence": 0.9,
+    "low_multiplier": 0.696,
+    "high_multiplier": 1.449,
+    "sparse_low_multiplier": 0.572,
+    "sparse_high_multiplier": 1.72
+  }
+}

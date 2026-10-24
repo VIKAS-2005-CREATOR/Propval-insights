@@ -53,14 +53,6 @@ def create_app(config_class=Config):
     if app.config.get('AUTO_CREATE_DB'):
         with app.app_context():
             db.create_all()
-            # Automatically promote Vikas10 to admin on startup
-            admin_user = app.config.get('ADMIN_USERNAME', 'Vikas10')
-            if admin_user:
-                from app.models import User
-                u = User.query.filter_by(username=admin_user).first()
-                if u and not u.is_admin:
-                    u.is_admin = True
-                    db.session.commit()
 
     return app
 

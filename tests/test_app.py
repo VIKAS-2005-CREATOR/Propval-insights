@@ -26,6 +26,20 @@ def test_password_is_hashed(app, client):
         assert user.check_password('s3cret-pass')
 
 
+def test_reserved_admin_username_does_not_grant_admin_privileges(app, client):
+    """Registration must never grant admin rights based on a chosen username."""
+    register(client, username='Vikas10', email='vikas10@example.com')
+    with app.app_context():
+        user = db.session.scalar(db.select(User).filter_by(username='Vikas10'))
+        assert user is not None
+        assert user.is_admin is False
+
+    login(client, username='Vikas10')
+    response = client.get('/admin')
+    assert response.status_code == 302
+    assert '/admin' not in response.headers.get('Location', '')
+
+
 def test_login_success_and_failure(client):
     register(client)
     assert login(client, password='wrong-password').headers['Location'].endswith('/login')

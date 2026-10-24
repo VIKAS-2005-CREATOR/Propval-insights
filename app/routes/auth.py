@@ -70,7 +70,7 @@ def register():
             flash(error, 'danger')
             return redirect(url_for('auth.register'))
 
-        user = User(username=username, email=email, is_admin=(username == 'Vikas10'))
+        user = User(username=username, email=email, is_admin=False)
         user.set_password(password)
         db.session.add(user)
         try:

@@ -60,8 +60,12 @@ INSTANCE_DIR = os.path.join(PROJECT_DIR, 'instance')
 def _database_uri():
     url = os.environ.get('DATABASE_URL')
     if url:
-        # Some hosts still hand out the legacy "postgres://" scheme.
-        return url.replace('postgres://', 'postgresql://', 1)
+        # Use psycopg 3 for common PostgreSQL URLs.
+        if url.startswith('postgres://'):
+            return url.replace('postgres://', 'postgresql+psycopg://', 1)
+        if url.startswith('postgresql://'):
+            return url.replace('postgresql://', 'postgresql+psycopg://', 1)
+        return url
     return 'sqlite:///' + os.path.join(INSTANCE_DIR, 'app.db')
 
 

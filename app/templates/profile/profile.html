@@ -1,0 +1,156 @@
+{% extends "layouts/base.html" %}
+{% block title %}User Profile - PropVal Insights{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 2rem;">
+    <div>
+        <h2><i class="fa-solid fa-id-badge"></i> User Profile Dashboard</h2>
+        <p>Manage your account details and review your personal valuation activity.</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <a href="{{ url_for('main.index') }}#predictor" class="btn-primary">
+            <i class="fa-solid fa-plus"></i> New Valuation
+        </a>
+        <a href="{{ url_for('main.history') }}" class="btn-outline">
+            <i class="fa-solid fa-clock-rotate-left"></i> View Full History
+        </a>
+    </div>
+</div>
+
+<!-- Profile Overview Card -->
+<div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem; border-left: 4px solid var(--primary);">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 1.25rem;">
+            <div style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 2.2rem; box-shadow: 0 4px 14px rgba(37,99,235,0.25);">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <h3 style="margin: 0; font-size: 1.6rem; color: var(--text);">{{ user.username }}</h3>
+                    {% if user.is_admin %}
+                    <span class="badge badge-purple" style="font-size: 0.8rem; padding: 4px 10px;">
+                        <i class="fa-solid fa-shield"></i> Administrator
+                    </span>
+                    {% else %}
+                    <span class="badge badge-blue" style="font-size: 0.8rem; padding: 4px 10px;">
+                        <i class="fa-solid fa-user-check"></i> Standard Member
+                    </span>
+                    {% endif %}
+                </div>
+                <p style="margin: 0.35rem 0 0; color: var(--text-muted); font-size: 0.95rem;">
+                    <i class="fa-regular fa-envelope"></i> {{ user.email }} · 
+                    <i class="fa-regular fa-calendar-check"></i> Member since {{ user.created_at.strftime('%d %B %Y') if user.created_at else 'Recent' }}
+                </p>
+            </div>
+        </div>
+
+        {% if user.is_admin %}
+        <div>
+            <a href="{{ url_for('admin.admin') }}" class="btn-primary" style="background: #8b5cf6; border-color: #8b5cf6;">
+                <i class="fa-solid fa-shield-halved"></i> Admin Control Panel
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Personal Valuation Stats Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+    <div class="glass-panel" style="padding: 1.5rem; text-align: center;">
+        <div style="font-size: 1.8rem; color: var(--primary); margin-bottom: 0.4rem;">
+            <i class="fa-solid fa-calculator"></i>
+        </div>
+        <div style="font-size: 2rem; font-weight: 800; color: var(--text);">{{ total_count }}</div>
+        <div style="color: var(--text-muted); font-size: 0.88rem; font-weight: 600; text-transform: uppercase;">Valuations Saved</div>
+    </div>
+
+    <div class="glass-panel" style="padding: 1.5rem; text-align: center;">
+        <div style="font-size: 1.8rem; color: var(--accent); margin-bottom: 0.4rem;">
+            <i class="fa-solid fa-coins"></i>
+        </div>
+        <div style="font-size: 2rem; font-weight: 800; color: var(--text);">
+            {% if avg_price %}₹{{ '{:,.2f}'.format(avg_price) }} Cr{% else %}&mdash;{% endif %}
+        </div>
+        <div style="color: var(--text-muted); font-size: 0.88rem; font-weight: 600; text-transform: uppercase;">Avg. Property Price</div>
+    </div>
+
+    <div class="glass-panel" style="padding: 1.5rem; text-align: center;">
+        <div style="font-size: 1.8rem; color: #10b981; margin-bottom: 0.4rem;">
+            <i class="fa-solid fa-map-pin"></i>
+        </div>
+        <div style="font-size: 1.4rem; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ top_region if top_region else '&mdash;'|safe }}
+        </div>
+        <div style="color: var(--text-muted); font-size: 0.88rem; font-weight: 600; text-transform: uppercase;">Top Location</div>
+    </div>
+
+    <div class="glass-panel" style="padding: 1.5rem; text-align: center;">
+        <div style="font-size: 1.8rem; color: #8b5cf6; margin-bottom: 0.4rem;">
+            <i class="fa-solid fa-lock"></i>
+        </div>
+        <div style="font-size: 1.4rem; font-weight: 800; color: var(--text);">Scrypt Hashed</div>
+        <div style="color: var(--text-muted); font-size: 0.88rem; font-weight: 600; text-transform: uppercase;">Account Security</div>
+    </div>
+</div>
+
+<!-- Recent Valuations Activity -->
+<div class="glass-panel table-card" style="margin-bottom: 2rem;">
+    <div class="table-meta" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 1.15rem;">
+            <i class="fa-solid fa-list-check"></i> Recent Valuation Activity
+        </h3>
+        {% if total_count > 0 %}
+        <a href="{{ url_for('main.history') }}" style="font-size: 0.88rem; color: var(--primary); text-decoration: none; font-weight: 600;">
+            View all {{ total_count }} <i class="fa-solid fa-arrow-right"></i>
+        </a>
+        {% endif %}
+    </div>
+
+    {% if recent_valuations %}
+    <div style="overflow-x:auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Property</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Predicted Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in recent_valuations %}
+                <tr>
+                    <td class="td-muted">
+                        <i class="fa-regular fa-calendar"></i> {{ r.timestamp.strftime('%d %b %Y') }}
+                    </td>
+                    <td>
+                        <strong>{{ r.bhk }} BHK {{ r.prop_type }}</strong> · <small class="td-muted">{{ r.carpet_area|int }} sq ft</small>
+                    </td>
+                    <td>
+                        <i class="fa-solid fa-location-dot" style="color:var(--primary)"></i> {{ r.region }}
+                    </td>
+                    <td>
+                        <span class="badge badge-blue">{{ r.status }}</span>
+                    </td>
+                    <td>
+                        <span class="price-cell">₹{{ '{:,.2f}'.format(r.predicted_price) }} Cr</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
+        <i class="fa-solid fa-chart-pie" style="font-size: 2.5rem; opacity: 0.4; margin-bottom: 1rem; display: block;"></i>
+        <h4 style="margin: 0 0 0.5rem; color: var(--text);">No valuations saved yet</h4>
+        <p style="margin: 0 0 1.25rem; font-size: 0.9rem;">Calculate property prices on Mumbai properties to track them in your personal dashboard.</p>
+        <a href="{{ url_for('main.index') }}#predictor" class="btn-primary" style="display: inline-flex;">
+            <i class="fa-solid fa-bolt"></i> Evaluate a Property
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

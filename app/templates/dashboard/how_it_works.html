@@ -1,0 +1,38 @@
+{% extends "layouts/base.html" %}
+{% block title %}How It Works - PropVal Insights{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="section" id="how-it-works">
+    <h2 class="section-title">How PropVal Insights Works</h2>
+    <p class="section-sub">Four steps turn raw listing data into a Mumbai property valuation.</p>
+    <div class="steps-grid">
+        <div class="step-card">
+            <div class="step-num">01</div>
+            <div class="step-icon"><i class="fa-solid fa-database"></i></div>
+            <h4>Data Cleaning</h4>
+            <p>Historical listings are loaded and cleaned: rows with missing fields, invalid prices, or duplicates are removed.</p>
+        </div>
+        <div class="step-card">
+            <div class="step-num">02</div>
+            <div class="step-icon"><i class="fa-solid fa-code-merge"></i></div>
+            <h4>Preprocessing</h4>
+            <p>Numeric fields are scaled, low-cardinality categories (type, status, age) are one-hot encoded, high-cardinality locations (region) are target-encoded, and skewed prices are log-transformed.</p>
+        </div>
+        <div class="step-card">
+            <div class="step-num">03</div>
+            <div class="step-icon"><i class="fa-solid fa-brain"></i></div>
+            <h4>Model Selection</h4>
+            <p>Random Forest and Gradient Boosting are compared with 5-fold cross-validation. The winner is scored once on a held-out test set.</p>
+        </div>
+        <div class="step-card">
+            <div class="step-num">04</div>
+            <div class="step-icon"><i class="fa-solid fa-rotate"></i></div>
+            <h4>Retraining</h4>
+            <p>When the dataset is updated, running the training script rebuilds the model and refreshes every metric shown on this site.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

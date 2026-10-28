@@ -1,238 +1,295 @@
 {% extends "layouts/base.html" %}
+
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+    /* Simple & Clean Buyer UI Styles */
+    .step-box {
+        background: var(--bg-card-solid);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.1rem;
+        margin-bottom: 1.1rem;
+    }
+    .step-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--primary);
+        margin-bottom: 0.8rem;
+    }
+    .verdict-box {
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 1.25rem;
+        font-size: 0.92rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .verdict-within { background: rgba(5, 150, 105, 0.12); border: 1px solid #059669; color: #059669; }
+    .verdict-below  { background: rgba(37, 99, 235, 0.12); border: 1px solid #2563eb; color: #2563eb; }
+    .verdict-above  { background: rgba(217, 119, 6, 0.15); border: 1px solid #d97706; color: #b45309; }
+
+    .cost-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.5rem;
+    }
+    .cost-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.9rem;
+    }
+    .cost-table tr:last-child td {
+        border-bottom: none;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-
-<!-- ═══════════════════════════════════════════════════════════════
-     HERO SECTION
-════════════════════════════════════════════════════════════════ -->
+<!-- 1. HERO BANNER (User Perspective) -->
 <section class="hero hero-bg-banner" id="hero">
     <div class="hero-bg-overlay"></div>
     <div class="hero-content">
         <div class="hero-badge">
-            <i class="fa-solid fa-sparkles"></i> Data-Driven Property Intelligence
+            <i class="fa-solid fa-house-circle-check"></i> Mumbai Homebuyer & Price Guide
         </div>
         <h1 class="hero-headline">
-            Predict Mumbai Property Prices <span class="gradient-text">in Seconds</span>
+            Check the Fair Market Price of Any <span class="gradient-text">Mumbai Property</span>
         </h1>
         <p class="hero-sub">
-            {% if metrics.n_rows %}Trained on {{ '{:,}'.format(metrics.n_rows) }} listings. {% endif %}Get an instant, data-backed
-            valuation for any property in Mumbai.
+            Get an instant property price estimate, BMC stamp duty & registration costs, and monthly EMI in seconds.
         </p>
         <div class="hero-stats">
-            {% if metrics.test_r2 %}
-            <div class="stat-chip"><i class="fa-solid fa-bullseye"></i> Test R² {{ '%.2f'|format(metrics.test_r2) }}</div>
-            {% endif %}
-            {% if metrics.mape_pct %}
-            <div class="stat-chip"><i class="fa-solid fa-percent"></i> ~{{ '%.0f'|format(metrics.mape_pct) }}% typical error</div>
-            {% endif %}
-            {% if metrics.n_rows %}
-            <div class="stat-chip"><i class="fa-solid fa-database"></i> {{ '{:,}'.format(metrics.n_rows) }} Listings</div>
-            {% endif %}
-            {% if model_scores.trained_at %}
-            <div class="stat-chip"><i class="fa-solid fa-calendar-check"></i> Trained {{ model_scores.trained_at }}</div>
-            {% endif %}
+            <div class="stat-chip"><i class="fa-solid fa-location-dot"></i> {{ categories.regions|length }} Mumbai Areas</div>
+            <div class="stat-chip"><i class="fa-solid fa-indian-rupee-sign"></i> On-Road Cost & EMI</div>
+            <div class="stat-chip"><i class="fa-solid fa-scale-balanced"></i> Seller Price Check</div>
         </div>
         <div class="hero-actions">
             <a href="#predictor" class="btn-primary btn-lg">
-                <i class="fa-solid fa-bolt"></i> Get Free Valuation
+                <i class="fa-solid fa-bolt"></i> Calculate Property Value
             </a>
             <a href="#mumbaiMap" class="btn-hero-secondary">
-                <i class="fa-solid fa-map-location-dot"></i> Micro-Market Map
+                <i class="fa-solid fa-map-location-dot"></i> View Price Map
             </a>
         </div>
     </div>
     <div class="hero-card-float hero-glass-badge">
         <div class="hc-top">
-            <span class="hc-label">Sample estimate</span>
-            <span class="badge badge-blue">Mumbai MMR</span>
+            <span class="hc-label">Sample Estimate</span>
+            <span class="badge badge-green">Fair Deal</span>
         </div>
         <div class="hc-price">₹2.85 Cr</div>
-        <div class="hc-meta">3 BHK · 1,250 sq ft · Bandra West</div>
+        <div class="hc-meta">3 BHK • 1,250 sq ft • Bandra West</div>
         <div class="hc-bottom">
-            <span>Illustrative example</span><strong>Not a live estimate</strong>
+            <span>Range: ₹2.30 – ₹3.40 Cr</span><strong>Ready to Move</strong>
         </div>
     </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     PREDICTOR WIDGET
-════════════════════════════════════════════════════════════════ -->
+<!-- 2. MAIN VALUATION CALCULATOR -->
 <section id="predictor" class="section">
     <div class="predictor-grid">
 
-        <!-- ── Input Form ── -->
+        <!-- LEFT SIDE: Simple 3-Step Property Form -->
         <div class="glass-panel form-panel">
             <h2 class="panel-title">
-                <i class="fa-solid fa-sliders"></i> Property Details
+                <i class="fa-solid fa-sliders"></i> Enter Property Details
             </h2>
+
             <form method="POST" action="{{ url_for('main.predict') }}#predictor" id="valuationForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                <!-- Location -->
-                <div class="form-group">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-                        <label class="label" for="region" style="margin-bottom:0;">
-                            <i class="fa-solid fa-location-dot"></i> Location / Neighborhood ({{ categories.regions|length }} Localities)
-                        </label>
-                        <a href="#mumbaiMap" style="font-size:0.8rem; font-weight:600; text-decoration:none;">
-                            <i class="fa-solid fa-crosshairs"></i> Locate on Map
-                        </a>
+                <!-- Step 1: Location, BHK & Area -->
+                <div class="step-box">
+                    <div class="step-title">1. Location & Flat Size</div>
+
+                    <div class="form-group">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                            <label class="label" for="region" style="margin-bottom:0;">
+                                <i class="fa-solid fa-location-dot"></i> Select Locality
+                            </label>
+                            <a href="#mumbaiMap" style="font-size:0.8rem; font-weight:600; text-decoration:none;">
+                                <i class="fa-solid fa-crosshairs"></i> Pick on Map
+                            </a>
+                        </div>
+                        <select class="input" id="region" name="region" required>
+                            {% if categories.regions %}
+                                {% for r in categories.regions %}
+                                <option value="{{ r }}" {% if form.region == r %}selected{% endif %}>{{ r }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <option>Andheri West</option>
+                            {% endif %}
+                        </select>
                     </div>
-                    <select class="input" id="region" name="region" required>
-                        {% if categories.regions %}
-                            {% for r in categories.regions %}
-                            <option value="{{ r }}" {% if form.region == r %}selected{% endif %}>{{ r }}</option>
+
+                    <div class="form-group">
+                        <span class="label" id="bhkLabel"><i class="fa-solid fa-bed"></i> BHK Configuration</span>
+                        <div class="seg-ctrl" id="bhkGroup" role="radiogroup" aria-labelledby="bhkLabel">
+                            {% set sel_bhk = form.bhk | int %}
+                            {% for i in range(1, 6) %}
+                            <input type="radio" id="bhk{{ i }}" name="bhk" value="{{ i }}" {% if sel_bhk == i %}checked{% endif %}>
+                            <label for="bhk{{ i }}">{{ i }} BHK</label>
                             {% endfor %}
-                        {% else %}
-                            <option>Andheri West</option>
-                        {% endif %}
-                    </select>
-                    <small class="field-hint">
-                        <i class="fa-solid fa-layer-group"></i> {{ categories.regions|length }} localities from the dataset
-                    </small>
-                </div>
-
-                <!-- BHK Segmented -->
-                <div class="form-group">
-                    <span class="label" id="bhkLabel"><i class="fa-solid fa-bed"></i> Configuration (BHK)</span>
-                    <div class="seg-ctrl" id="bhkGroup" role="radiogroup" aria-labelledby="bhkLabel">
-                        {% set sel_bhk = form.bhk | int %}
-                        {% for i in range(1, 6) %}
-                        <input type="radio" id="bhk{{ i }}" name="bhk" value="{{ i }}"
-                               {% if sel_bhk == i %}checked{% endif %}>
-                        <label for="bhk{{ i }}">{{ i }} BHK</label>
-                        {% endfor %}
+                        </div>
                     </div>
-                </div>
 
-                <!-- Area Slider -->
-                <div class="form-group">
-                    <label class="label" for="area">
-                        <i class="fa-solid fa-vector-square"></i>
-                        Carpet Area — <span id="areaLabel">{{ form.area }}</span> sq ft
-                    </label>
-                    <input type="range" id="area-slider" aria-label="Carpet area slider"
-                           min="300" max="5000" step="50"
-                           value="{{ form.area }}"
-                           class="range-input">
-                    <div class="range-ends">
-                        <span>300 sq ft</span>
-                        <input type="number" id="area" name="area"
-                               class="input area-num" min="100" max="10000"
-                               value="{{ form.area }}" required>
-                    </div>
-                </div>
-
-                <!-- Type & Status -->
-                <div class="two-col">
-                    <div class="form-group">
-                        <label class="label" for="prop_type">
-                            <i class="fa-solid fa-building"></i> Property Type
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="label" for="area">
+                            <i class="fa-solid fa-vector-square"></i> Carpet Area — <span id="areaLabel">{{ form.area }}</span> sq ft
                         </label>
-                        <select class="input" id="prop_type" name="prop_type" required>
-                            {% if categories.types %}
-                                {% for t in categories.types %}
-                                <option value="{{ t }}" {% if form.prop_type == t %}selected{% endif %}>{{ t }}</option>
-                                {% endfor %}
-                            {% else %}
-                                <option>Apartment</option>
-                            {% endif %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="label" for="status">
-                            <i class="fa-solid fa-circle-check"></i> Status
-                        </label>
-                        <select class="input" id="status" name="status" required>
-                            {% if categories.statuses %}
-                                {% for s in categories.statuses %}
-                                <option value="{{ s }}" {% if form.status == s %}selected{% endif %}>{{ s }}</option>
-                                {% endfor %}
-                            {% else %}
-                                <option>Ready to move</option>
-                            {% endif %}
-                        </select>
+                        <input type="range" id="area-slider" aria-label="Carpet area slider"
+                               min="300" max="5000" step="50" value="{{ form.area }}" class="range-input">
+                        <div class="range-ends">
+                            <span>300 sq ft</span>
+                            <input type="number" id="area" name="area" class="input area-num"
+                                   min="100" max="10000" value="{{ form.area }}" required>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Age & Transit Proximity -->
-                <div class="two-col">
-                    <div class="form-group">
-                        <label class="label" for="age">
-                            <i class="fa-solid fa-calendar"></i> Property Age
-                        </label>
-                        <select class="input" id="age" name="age" required>
-                            {% if categories.ages %}
-                                {% for a in categories.ages %}
-                                <option value="{{ a }}" {% if form.age == a %}selected{% endif %}>{{ a }}</option>
-                                {% endfor %}
-                            {% else %}
-                                <option>New</option>
-                            {% endif %}
-                        </select>
+                <!-- Step 2: Property Type, Status & Station Distance -->
+                <div class="step-box">
+                    <div class="step-title">2. Property Condition & Connectivity</div>
+
+                    <div class="two-col">
+                        <div class="form-group">
+                            <label class="label" for="prop_type"><i class="fa-solid fa-building"></i> Property Type</label>
+                            <select class="input" id="prop_type" name="prop_type" required>
+                                {% if categories.types %}
+                                    {% for t in categories.types %}
+                                    <option value="{{ t }}" {% if form.prop_type == t %}selected{% endif %}>{{ t }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option>Apartment</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="label" for="status"><i class="fa-solid fa-circle-check"></i> Possession Status</label>
+                            <select class="input" id="status" name="status" required>
+                                {% if categories.statuses %}
+                                    {% for s in categories.statuses %}
+                                    <option value="{{ s }}" {% if form.status == s %}selected{% endif %}>{{ s }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option>Ready to move</option>
+                                {% endif %}
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="label" for="transit_proximity">
-                            <i class="fa-solid fa-train-subway"></i> Station / Metro Proximity
-                        </label>
-                        <select class="input" id="transit_proximity" name="transit_proximity">
-                            <option value="walkable" {% if form.transit_proximity == 'walkable' %}selected{% endif %}>Walkable (&lt; 10 min / 800m)</option>
-                            <option value="standard" {% if not form.transit_proximity or form.transit_proximity == 'standard' %}selected{% endif %}>Standard (1 - 3 km / Auto)</option>
-                            <option value="extended" {% if form.transit_proximity == 'extended' %}selected{% endif %}>Extended (&gt; 3 km / Feeder)</option>
-                        </select>
-                        <small class="field-hint">Adjusts the estimate by +{{ '%.0f'|format(config.TRANSIT_PREMIUM_WALKABLE * 100) }}% or -{{ '%.0f'|format(config.TRANSIT_DISCOUNT_EXTENDED * 100) }}%. This is an assumption, not learned from the dataset.</small>
+
+                    <div class="two-col">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="label" for="age"><i class="fa-solid fa-calendar"></i> New / Resale</label>
+                            <select class="input" id="age" name="age" required>
+                                {% if categories.ages %}
+                                    {% for a in categories.ages %}
+                                    <option value="{{ a }}" {% if form.age == a %}selected{% endif %}>{{ a }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option>New</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="label" for="transit_proximity"><i class="fa-solid fa-train-subway"></i> Station / Metro</label>
+                            <select class="input" id="transit_proximity" name="transit_proximity">
+                                <option value="walkable" {% if form.transit_proximity == 'walkable' %}selected{% endif %}>Walkable (&lt; 10 min)</option>
+                                <option value="standard" {% if not form.transit_proximity or form.transit_proximity == 'standard' %}selected{% endif %}>Standard (1 - 3 km)</option>
+                                <option value="extended" {% if form.transit_proximity == 'extended' %}selected{% endif %}>Extended (&gt; 3 km)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Optional asking price -->
-                <div class="form-group">
-                    <label class="label" for="asking_price">
-                        <i class="fa-solid fa-tag"></i> Asking Price in Cr (optional)
-                    </label>
-                    <input type="number" class="input" id="asking_price" name="asking_price"
-                           min="0.05" max="1000" step="0.01" placeholder="e.g. 2.50"
-                           value="{{ form.asking_price }}">
+                <!-- Step 3: Optional Seller Price Check -->
+                <div class="step-box">
+                    <div class="step-title">3. Check Seller's Quoted Price (Optional)</div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="label" for="asking_price">
+                            <i class="fa-solid fa-tag"></i> Broker / Builder Asking Price (in Cr)
+                        </label>
+                        <input type="number" class="input" id="asking_price" name="asking_price"
+                               min="0.05" max="1000" step="0.01" placeholder="e.g. 2.50"
+                               value="{{ form.asking_price }}">
+                    </div>
                 </div>
 
                 <button type="submit" class="btn-primary btn-submit" id="submitBtn">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Calculate Valuation
+                    <i class="fa-solid fa-calculator"></i> Calculate Fair Price & EMI
                 </button>
             </form>
         </div>
 
-        <!-- ── Results Panel ── -->
+        <!-- RIGHT SIDE: Buyer Valuation Report (All visible for clean PDF Export) -->
         <div class="glass-panel results-panel" id="resultsPanel">
             {% if predicted_price %}
-            <!-- Export PDF Button -->
-            <button class="btn-secondary" id="exportPdfBtn" style="margin-bottom: 1.5rem; width: 100%; border: 1px solid var(--border-strong); background: transparent; transition: var(--transition);">
-                <i class="fa-solid fa-file-pdf"></i> Export Valuation to PDF
+
+            <!-- PDF Download Button (Hidden in Print) -->
+            <button type="button" class="btn-outline" id="exportPdfBtn" style="margin-bottom: 1.25rem; width: 100%; justify-content: center;">
+                <i class="fa-solid fa-file-pdf"></i> Download / Print Valuation PDF Report
             </button>
-            <!-- Valuation Card -->
+
+            <!-- Print-Only Report Header -->
+            <div class="print-only-header">
+                <div>
+                    <div class="print-brand"><i class="fa-solid fa-house-signal"></i> PropVal Insights</div>
+                    <div class="print-sub">Mumbai Real Estate Valuation & Cost Assessment</div>
+                </div>
+                <div class="print-meta">
+                    <div><strong>Location:</strong> {{ form.region }}</div>
+                    <div><strong>Config:</strong> {{ form.bhk }} BHK • {{ form.area }} sq ft • {{ form.prop_type }}</div>
+                </div>
+            </div>
+
+            <!-- Seller Quote Verdict Box (If user entered asking price) -->
+            {% if asking_price %}
+            <div class="verdict-box verdict-{{ asking_verdict }}">
+                <div>
+                    <strong>
+                        {% if asking_verdict == 'within' %}
+                            <i class="fa-solid fa-circle-check"></i> Fair Deal (Within Range)
+                        {% elif asking_verdict == 'below' %}
+                            <i class="fa-solid fa-thumbs-up"></i> Great Value (Below Range)
+                        {% else %}
+                            <i class="fa-solid fa-triangle-exclamation"></i> High Quote (Above Range)
+                        {% endif %}
+                    </strong>
+                    <div style="font-size: 0.82rem; margin-top: 2px;">
+                        Quoted Price: ₹{{ '{:,.2f}'.format(asking_price) }} Cr ({{ '%+.1f'|format(asking_diff_pct) }}% vs estimate)
+                    </div>
+                </div>
+                <span class="badge badge-blue">{{ {'below': 'below range', 'within': 'within range', 'above': 'above range'}[asking_verdict] }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Main Estimated Price Card -->
             <div class="val-card">
                 <div class="val-card-top">
-                    <span class="val-label">Estimated Market Price</span>
-                    {% if typical_error_pct %}
-                    <span class="badge badge-blue">Typical error ~{{ '%.0f'|format(typical_error_pct) }}%</span>
-                    {% endif %}
+                    <span class="val-label">{{ form.bhk }} BHK {{ form.prop_type }} • {{ form.region }}</span>
+                    <span class="badge badge-green">{{ form.area }} sq ft</span>
                 </div>
                 <div class="val-price">₹{{ '{:,.2f}'.format(predicted_price) }} Cr</div>
+
                 {% if price_low and price_high %}
                 <div class="val-range">
                     <span>Low: ₹{{ '{:,.2f}'.format(price_low) }} Cr</span>
                     <span class="range-bar-wrap">
-                        <span class="range-bar-fill" style="left: 5%; right: 5%;"></span>
+                        <span class="range-bar-fill" style="left: 10%; right: 10%;"></span>
                     </span>
                     <span>High: ₹{{ '{:,.2f}'.format(price_high) }} Cr</span>
                 </div>
-                <p style="font-size:0.8rem;margin:0.5rem 0 0;">
-                    {% if low_data %}90% of held-out predictions for thinly covered regions landed inside this wider band.
-                    {% else %}90% of held-out test predictions landed inside this band.{% endif %}
+                <p style="font-size:0.8rem; margin:0.5rem 0 0;">
+                    Recommended negotiation range for this property.
                 </p>
                 {% endif %}
+
                 {% if low_data %}
                 <p class="data-warning">
                     <i class="fa-solid fa-triangle-exclamation"></i>
@@ -240,23 +297,9 @@
                     were available for training, so treat this estimate as rough.
                 </p>
                 {% endif %}
-
-                {% if cost %}
-                <!-- Collapsible Financial Summary (Hidden by default) -->
-                <details class="cost-accordion" style="margin-top: 1rem; cursor: pointer;">
-                    <summary style="font-weight: 600; opacity: 0.85;">
-                        View Estimated On-Road Cost &amp; EMI (Optional)
-                    </summary>
-                    <div style="margin-top: 0.75rem; font-size: 0.9rem; line-height: 1.6;">
-                        <p><strong>BMC Stamp Duty (6%) + Reg (1%):</strong> ₹{{ cost.stamp_duty_reg | inr }}</p>
-                        <p><strong>Total Acquisition Cost:</strong> ₹{{ cost.total_cost | inr }}</p>
-                        <p><strong>Est. Monthly EMI (80% LTV @ 8.5%, 20 yrs):</strong> ₹{{ cost.estimated_emi | inr }}</p>
-                    </div>
-                </details>
-                {% endif %}
             </div>
 
-            <!-- Sub-metrics -->
+            <!-- Key Property Rates -->
             <div class="sub-metrics">
                 <div class="sub-metric-box">
                     <span class="sm-icon"><i class="fa-solid fa-ruler"></i></span>
@@ -265,162 +308,102 @@
                         <div class="sm-value">₹{{ '{:,}'.format(price_per_sqft) }}</div>
                     </div>
                 </div>
+
                 {% if insights and insights.avg_price_cr %}
                 <div class="sub-metric-box">
                     <span class="sm-icon"><i class="fa-solid fa-chart-line"></i></span>
                     <div>
-                        <div class="sm-label">Region Average <small>· {{ insights.avg_count }} listings</small></div>
+                        <div class="sm-label">Area Average</div>
                         <div class="sm-value">₹{{ '{:,.2f}'.format(insights.avg_price_cr) }} Cr</div>
                     </div>
                 </div>
                 <div class="sub-metric-box">
                     <span class="sm-icon"><i class="fa-solid fa-scale-balanced"></i></span>
                     <div>
-                        <div class="sm-label">Estimate vs Region Avg</div>
+                        <div class="sm-label">vs Area Avg</div>
                         <div class="sm-value">{{ '%+.1f'|format(insights.avg_diff_pct) }}%</div>
                     </div>
                 </div>
                 {% endif %}
-                {% if transit_proximity and transit_proximity != 'standard' %}
-                {% set transit_class = 'transit-walkable' if transit_adjustment_pct > 0 else 'transit-extended' %}
-                <div class="sub-metric-box {{ transit_class }}">
-                    <span class="sm-icon"><i class="fa-solid {{ 'fa-person-walking' if transit_adjustment_pct > 0 else 'fa-bus' }}"></i></span>
-                    <div>
-                        <div class="sm-label">Station / Metro Access <small>· assumption</small></div>
-                        <div class="sm-value">{{ '%+.1f'|format(transit_adjustment_pct) }}% <small>({{ '%+.1f'|format(transit_impact_lakh) }} L)</small></div>
-                    </div>
-                </div>
-                {% endif %}
-                {% if asking_price %}
-                <div class="sub-metric-box">
-                    <span class="sm-icon"><i class="fa-solid fa-tag"></i></span>
-                    <div>
-                        <div class="sm-label">Asking vs Estimate</div>
-                        <div class="sm-value">{{ '%+.1f'|format(asking_diff_pct) }}%
-                            <small>{{ {'below': 'below range', 'within': 'within range', 'above': 'above range'}[asking_verdict] }}</small>
-                        </div>
-                    </div>
-                </div>
+            </div>
+
+            <!-- On-Road Cost & EMI Breakdown Card (Always open & visible) -->
+            {% if cost %}
+            <div class="chart-card">
+                <h4 class="chart-title"><i class="fa-solid fa-indian-rupee-sign"></i> On-Road Cost & Monthly EMI</h4>
+                <table class="cost-table">
+                    <tr>
+                        <td>Estimated Property Value</td>
+                        <td style="text-align:right;"><strong>₹{{ '{:,.2f}'.format(predicted_price) }} Cr</strong></td>
+                    </tr>
+                    <tr>
+                        <td>BMC Stamp Duty (6%) + Registration (1%)</td>
+                        <td style="text-align:right;"><strong>₹{{ cost.stamp_duty_reg | inr }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total On-Road Buying Cost</strong></td>
+                        <td style="text-align:right; color:var(--primary);"><strong>₹{{ cost.total_cost | inr }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Estimated Monthly EMI</strong> (20 yrs @ 8.5%)</td>
+                        <td style="text-align:right; color:var(--accent);"><strong>₹{{ cost.estimated_emi | inr }} / mo</strong></td>
+                    </tr>
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- Buyer Notes & Negotiation Advice -->
+            <div class="chart-card" style="margin-bottom: 0;">
+                <h4 class="chart-title"><i class="fa-solid fa-clipboard-list"></i> Buyer Summary</h4>
+                <p style="font-size: 0.88rem; margin-bottom: 0.5rem;">
+                    {% if insights.avg_diff_pct is defined %}
+                        This property is <strong>{{ '%.1f'|format(insights.avg_diff_pct|abs) }}% {{ 'below' if insights.avg_diff_pct < 0 else 'above' }}</strong> the {{ form.region }} average of ₹{{ insights.avg_price_cr }} Cr ({{ insights.avg_count }} listings).
+                    {% else %}
+                        Use the ₹{{ '{:,.2f}'.format(price_low) }} Cr – ₹{{ '{:,.2f}'.format(price_high) }} Cr band to negotiate your price.
+                    {% endif %}
+                </p>
+                {% if insights and insights.alternative_regions %}
+                <p style="font-size: 0.85rem; margin: 0;">
+                    <strong>Similar Budget Areas:</strong>
+                    {% for alt in insights.alternative_regions %}
+                        {{ alt.name }} (₹{{ '{:,.2f}'.format(alt.avg_price) }} Cr){% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
                 {% endif %}
             </div>
 
-            <!-- Deal notes: plain observations computed from the numbers above -->
-            <div class="chart-card" style="margin-top: 1.5rem; border: 1px solid var(--border);">
-                <h4 class="chart-title"><i class="fa-solid fa-clipboard-list"></i> Deal Notes</h4>
-                <div style="display: grid; gap: 0.75rem; margin-top: 1rem;">
-                    <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
-                        <span style="color: var(--primary); font-size: 1.1rem; margin-top: 2px;"><i class="fa-solid fa-circle-check"></i></span>
-                        <div>
-                            <strong style="font-size: 0.9rem; color: var(--text);">Compared with the area:</strong>
-                            <p style="margin: 0.15rem 0 0; font-size: 0.85rem; color: var(--text-muted);">
-                                {% if insights.avg_diff_pct is defined %}
-                                    {% set diff = insights.avg_diff_pct %}
-                                    {% if diff <= -2 %}
-                                    The estimate is <strong>{{ '%.1f'|format(diff|abs) }}% below</strong> the {{ form.region }} average of ₹{{ insights.avg_price_cr }} Cr for this BHK ({{ insights.avg_count }} listings).
-                                    {% elif diff >= 2 %}
-                                    The estimate is <strong>{{ '%.1f'|format(diff) }}% above</strong> the {{ form.region }} average of ₹{{ insights.avg_price_cr }} Cr ({{ insights.avg_count }} listings). Larger, newer or better-located flats usually cost more than the average.
-                                    {% else %}
-                                    The estimate is close to the {{ form.region }} average of ₹{{ insights.avg_price_cr }} Cr for this BHK ({{ insights.avg_count }} listings).
-                                    {% endif %}
-                                {% else %}
-                                There are too few comparable {{ form.bhk }} BHK listings in {{ form.region }} to quote an area average.
-                                {% endif %}
-                            </p>
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
-                        <span style="color: #f59e0b; font-size: 1.1rem; margin-top: 2px;"><i class="fa-solid fa-handshake-simple"></i></span>
-                        <div>
-                            <strong style="font-size: 0.9rem; color: var(--text);">For negotiation:</strong>
-                            <p style="margin: 0.15rem 0 0; font-size: 0.85rem; color: var(--text-muted);">
-                                {% if price_low and price_high %}
-                                The model's 90% range is ₹{{ '{:,.2f}'.format(price_low) }} to ₹{{ '{:,.2f}'.format(price_high) }} Cr. Use it as a reference and compare it with the listings below.
-                                {% else %}
-                                Compare the estimate with the similar listings below before making an offer.
-                                {% endif %}
-                                {% if asking_price %}
-                                The asking price of ₹{{ '{:,.2f}'.format(asking_price) }} Cr is {{ {'below': 'below', 'within': 'inside', 'above': 'above'}[asking_verdict] }} that range.
-                                {% endif %}
-                            </p>
-                        </div>
-                    </div>
-                </div>
+            <!-- Print-Only Compact Legal Disclaimer -->
+            <div class="print-disclaimer">
+                PropVal Insights • Statistical estimate based on Mumbai market listings • Not an official bank or legal appraisal
             </div>
 
             {% else %}
-            <!-- Empty State -->
+            <!-- Empty State (Shown before calculation or if there is a form error) -->
             <div class="empty-state">
                 {% if form_error %}
-                <div class="form-error" role="alert" style="text-align:left;margin-bottom:1rem;">
+                <div class="form-error" role="alert" style="text-align:left; margin-bottom:1rem;">
                     <strong>Could not calculate:</strong> {{ form_error }}
                 </div>
                 {% endif %}
                 <div class="empty-icon">
                     <i class="fa-solid fa-house-circle-check"></i>
                 </div>
-                <h3>Ready to Predict</h3>
-                <p>Fill in the property details on the left and hit <strong>Calculate Valuation</strong> to get an instant machine-learning estimate.</p>
+                <h3>Ready to Calculate</h3>
+                <p>Fill in the property details on the left and click <strong>Calculate Fair Price & EMI</strong> to get your valuation report.</p>
             </div>
             {% endif %}
         </div>
 
-    </div><!-- /predictor-grid -->
+    </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     MUMBAI MICRO-MARKET EXPLORER (below the form so phones reach the form first)
-════════════════════════════════════════════════════════════════ -->
-<section class="section" id="map-section">
-<div class="glass-panel map-panel">
-    <div class="map-panel-header">
-        <div>
-            <h3><i class="fa-solid fa-map-location-dot"></i> Mumbai Micro-Market Explorer</h3>
-            <p>Click the map to pick a location for the valuation form above. {{ categories.regions|length }} localities are in the dataset.</p>
-        </div>
-        <div class="map-active-badge">
-            <i class="fa-solid fa-location-dot"></i>
-            <span id="activeLocLabel">{{ form.region }}</span>
-        </div>
-    </div>
-
-    <div class="map-zone-bar">
-        <button type="button" class="btn-zone active" data-zone="all">All Mumbai</button>
-        <button type="button" class="btn-zone" data-zone="south">South Mumbai</button>
-        <button type="button" class="btn-zone" data-zone="western">Western Suburbs</button>
-        <button type="button" class="btn-zone" data-zone="central">Central Suburbs</button>
-        <button type="button" class="btn-zone" data-zone="thane">Thane</button>
-        <button type="button" class="btn-zone" data-zone="navi">Navi Mumbai</button>
-        <button type="button" class="btn-zone btn-heat" id="heatToggleBtn" aria-pressed="false" style="margin-left:auto;">
-            <i class="fa-solid fa-layer-group"></i> Price Heatmap
-        </button>
-        <button type="button" class="btn-zone" id="expandMapBtn" aria-pressed="false" style="margin-left:0.5rem;" title="Expand Map">
-            <i class="fa-solid fa-expand"></i>
-        </button>
-    </div>
-
-    <div id="heatmapLegend" class="heatmap-legend" style="display:none;">
-        <span class="hl-title">Median rate per sq ft:</span>
-    </div>
-
-    <div id="mumbaiMap" role="region" aria-label="Map of Mumbai localities"></div>
-
-    <div class="map-footer">
-        <span><i class="fa-solid fa-crosshairs"></i> <span id="mapCoordsBadge">Select a location</span></span>
-        <span>Dashed, faded circles have fewer than 30 listings, so treat their rate as rough.</span>
-    </div>
-</div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════
-     COMPARABLES (only shown after prediction)
-════════════════════════════════════════════════════════════════ -->
+<!-- 3. SIMILAR PROPERTIES IN THE AREA -->
 {% if predicted_price and recommendations %}
 <section class="section" id="comps">
     <h2 class="section-title">
-        <i class="fa-solid fa-house-user"></i>
-        Comparable Properties in {{ form.region }}
+        <i class="fa-solid fa-house-user"></i> Similar Properties in {{ form.region }}
     </h2>
-    <p class="section-sub">Real listings from our dataset that closely match your valuation.</p>
+    <p class="section-sub">Real listings from our dataset that closely match your property.</p>
     <div class="comps-grid">
         {% for c in recommendations %}
         <div class="comp-card glass-panel">
@@ -437,33 +420,64 @@
 </section>
 {% endif %}
 
-<!-- ═══════════════════════════════════════════════════════════════
-     LOCAL HISTORY DRAWER
-════════════════════════════════════════════════════════════════ -->
+<!-- 4. MUMBAI INTERACTIVE PRICE MAP -->
+<section class="section" id="map-section">
+    <div class="glass-panel map-panel">
+        <div class="map-panel-header">
+            <div>
+                <h3><i class="fa-solid fa-map-location-dot"></i> Mumbai Micro-Market Explorer</h3>
+                <p>Click the map to select a locality for the valuation form above.</p>
+            </div>
+            <div class="map-active-badge">
+                <i class="fa-solid fa-location-dot"></i>
+                <span id="activeLocLabel">{{ form.region }}</span>
+            </div>
+        </div>
+        <div class="map-zone-bar">
+            <button type="button" class="btn-zone active" data-zone="all">All Mumbai</button>
+            <button type="button" class="btn-zone" data-zone="south">South Mumbai</button>
+            <button type="button" class="btn-zone" data-zone="western">Western Suburbs</button>
+            <button type="button" class="btn-zone" data-zone="central">Central Suburbs</button>
+            <button type="button" class="btn-zone" data-zone="thane">Thane</button>
+            <button type="button" class="btn-zone" data-zone="navi">Navi Mumbai</button>
+            <button type="button" class="btn-zone btn-heat" id="heatToggleBtn" aria-pressed="false" style="margin-left:auto;">
+                <i class="fa-solid fa-layer-group"></i> Price Heatmap
+            </button>
+            <button type="button" class="btn-zone" id="expandMapBtn" aria-pressed="false" style="margin-left:0.5rem;" title="Expand Map">
+                <i class="fa-solid fa-expand"></i>
+            </button>
+        </div>
+        <div id="heatmapLegend" class="heatmap-legend" style="display:none;">
+            <span class="hl-title">Median rate per sq ft:</span>
+        </div>
+        <div id="mumbaiMap" role="region" aria-label="Map of Mumbai localities"></div>
+        <div class="map-footer">
+            <span><i class="fa-solid fa-crosshairs"></i> <span id="mapCoordsBadge">Select a location</span></span>
+            <span>Dashed circles have fewer than 30 listings.</span>
+        </div>
+    </div>
+</section>
+
+<!-- 5. RECENT VALUATIONS ON THIS DEVICE -->
 {% if not current_user.is_authenticated %}
 <section class="section" id="recent">
     <h2 class="section-title">Recent Valuations (This Device)</h2>
-    <p class="section-sub">Stored locally in your browser. No login required.</p>
+    <p class="section-sub">Stored locally in your browser.</p>
     <div class="history-list" id="localHistory">
         <p style="text-align:center;color:var(--text-muted);">No recent valuations yet.</p>
     </div>
 </section>
 {% endif %}
-
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
-{# Inject server data as JSON for JS to consume #}
 {% if predicted_price %}
 <script id="d-price" type="application/json">{{ predicted_price | tojson }}</script>
 {% endif %}
 {% if insights %}
 <script id="d-insights" type="application/json">{{ insights | tojson }}</script>
 {% endif %}
-
 <script id="page-config" type="application/json">{{ {'coordinatesUrl': url_for('static', filename='data/mumbai_coordinates.json'), 'heatmapUrl': url_for('main.api_heatmap_data')} | tojson }}</script>
 <script src="{{ url_for('static', filename='js/index.js') }}" defer></script>
 {% endblock %}

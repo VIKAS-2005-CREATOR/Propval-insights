@@ -33,7 +33,6 @@ def test_reserved_admin_username_does_not_grant_admin_privileges(app, client):
         user = db.session.scalar(db.select(User).filter_by(username='Vikas10'))
         assert user is not None
         assert user.is_admin is False
-
     login(client, username='Vikas10')
     response = client.get('/admin')
     assert response.status_code == 302
@@ -59,7 +58,6 @@ def test_duplicate_username_rejected(app, client):
     register(client, email='other@example.com')
     with app.app_context():
         assert len(db.session.scalars(db.select(User)).all()) == 1
-
 
 
 def test_open_redirect_is_blocked(client):
@@ -119,7 +117,6 @@ def test_predict_form_redirects_and_saves_history(app, client):
     assert 'area=850' in response.headers['Location']
     with app.app_context():
         assert db.session.scalar(db.select(db.func.count(ValuationHistory.id))) == 1
-
     page = client.get(response.headers['Location'])
     assert page.status_code == 200
     assert b'2.50' in page.data
@@ -133,7 +130,7 @@ def test_invalid_form_shows_error(client):
 
 
 def test_public_pages_render(client):
-    for path in ('/', '/how-it-works', '/performance', '/login', '/register', '/healthz'):
+    for path in ('/', '/how-it-works', '/about', '/login', '/register', '/healthz'):
         assert client.get(path).status_code == 200, path
     assert client.get('/does-not-exist').status_code == 404
 
@@ -157,7 +154,6 @@ def test_region_average_needs_enough_listings(app, monkeypatch):
     from app.services import predictor
 
     def frame(n):
-        # Rows differ slightly because real loading drops exact duplicates.
         return pd.DataFrame({
             'region': ['Andheri West'] * n, 'bhk': [2] * n, 'area': [850 + i for i in range(n)],
             'type': ['Apartment'] * n, 'status': ['Ready to move'] * n,
@@ -181,7 +177,7 @@ def test_api_rejects_unknown_transit_option(client):
     assert response.status_code == 400
 
 
-# ---- heatmap and assistant APIs ---------------------------------------------
+# ---- heatmap API ----------------------------------------------------------
 
 def test_heatmap_api_returns_tiers_and_regions(client):
     response = client.get('/api/heatmap-data')
@@ -191,6 +187,9 @@ def test_heatmap_api_returns_tiers_and_regions(client):
     assert data['regions'] == []              # no dataset file in the test config
     assert 'max-age' in response.headers['Cache-Control']
 
+    # Test alias route
+    alias_response = client.get('/api/heatmap')
+    assert alias_response.status_code == 200
 
 
 # ---- admin retrain ------------------------------------------------------------
@@ -288,7 +287,7 @@ def test_form_error_is_shown_next_to_the_form(client):
     assert b'Could not calculate' in page.data and b'between 100 and 10000' in page.data
 
 
-# ---- profile, about, performance, and navigation ---------------------------
+# ---- profile, about, and navigation ---------------------------
 
 def test_profile_requires_login(client):
     response = client.get('/profile')
@@ -327,25 +326,13 @@ def test_about_page_content(client):
     assert 'Stamp Duty' in html
 
 
-def test_performance_page_content(client):
-    response = client.get('/performance')
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-    assert 'Gradient Boosting' in html
-    assert 'Random Forest' in html
-    assert 'Test R' in html
-    assert 'Cross-Validation' in html
-
-
 def test_navbar_structure_and_links(client):
     # Anonymous state: Login and Register are present
     anon_page = client.get('/').get_data(as_text=True)
     assert 'Login' in anon_page
     assert 'Register' in anon_page
-    assert 'ACTIVE ML PIPELINE' in anon_page
-    assert 'Gradient Boosting' in anon_page
-    assert anon_page.find('Get Valuation') < anon_page.find('Performance')
-    assert anon_page.find('Performance') < anon_page.find('How It Works')
+    assert anon_page.find('Get Valuation') < anon_page.find('Mumbai Price Map')
+    assert anon_page.find('Mumbai Price Map') < anon_page.find('How It Works')
     assert anon_page.find('How It Works') < anon_page.find('About')
     assert anon_page.find('About') < anon_page.find('Profile Dashboard')
     assert anon_page.find('Profile Dashboard') < anon_page.rfind('Login')

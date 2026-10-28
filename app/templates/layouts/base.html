@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="PropVal Insights — Instant, data-driven property valuations for Mumbai real estate.">
+    <meta name="description" content="PropVal Insights — Instant property valuations for Mumbai real estate.">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}PropVal Insights — Mumbai Property Valuations{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,40 +12,83 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/extras.css') }}">
+    <style>
+        /* Simple & Clean User Avatar Badge */
+        .user-profile-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            text-decoration: none;
+            width: 100%;
+            margin-bottom: 4px;
+        }
+        .user-avatar-logo {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        .buyer-info-box {
+            margin: 0.75rem 0;
+            padding: 12px 14px;
+            background: rgba(5, 150, 105, 0.08);
+            border: 1px solid rgba(5, 150, 105, 0.2);
+            border-radius: 10px;
+            width: 100%;
+        }
+    </style>
     {% block head %}{% endblock %}
     <script>
         try {
             if (localStorage.getItem('theme') === 'dark') {
                 document.documentElement.setAttribute('data-theme', 'dark');
             }
-        } catch (e) { /* storage unavailable, keep the light theme */ }
+        } catch (e) {}
     </script>
 </head>
 <body>
 
-<!-- 3-Dots Menu Trigger Button -->
+<!-- Mobile Menu Button -->
 <button class="hamburger menu-toggle-btn" id="hamburger" aria-label="Toggle navigation" aria-controls="navLinks">
     <i class="fa-solid fa-ellipsis-vertical" id="menuToggleIcon"></i>
 </button>
 
+<!-- Left Sidebar Navigation -->
 <nav class="glass-nav" id="navbar">
     <a class="nav-brand" href="{{ url_for('main.index') }}">
         <i class="fa-solid fa-house-signal"></i> PropVal Insights
     </a>
+
     <div class="nav-links" id="navLinks">
-        <!-- 2. Primary CTA -->
+        <!-- Main Calculator Button -->
         <a class="nav-link btn-primary" href="{{ url_for('main.index') }}#predictor" style="justify-content: center; width: 100%; margin-top: 0.25rem; margin-bottom: 0.5rem; color: #ffffff !important;">
             <i class="fa-solid fa-bolt" style="color: #ffffff !important;"></i> Get Valuation
         </a>
 
-        <!-- Main Navigation Links -->
-        <a class="nav-link" href="{{ url_for('main.performance') }}"><i class="fa-solid fa-chart-simple"></i> Performance</a>
-        <a class="nav-link" href="{{ url_for('main.how_it_works') }}"><i class="fa-solid fa-circle-question"></i> How It Works</a>
-        <a class="nav-link" href="{{ url_for('main.about') }}"><i class="fa-solid fa-info-circle"></i> About</a>
+        <!-- Buyer Navigation Links (Performance completely removed) -->
+        <a class="nav-link" href="{{ url_for('main.index') }}#map-section">
+            <i class="fa-solid fa-map-location-dot"></i> Mumbai Price Map
+        </a>
+        <a class="nav-link" href="{{ url_for('main.how_it_works') }}">
+            <i class="fa-solid fa-circle-question"></i> How It Works
+        </a>
+        <a class="nav-link" href="{{ url_for('main.about') }}">
+            <i class="fa-solid fa-info-circle"></i> About
+        </a>
 
         <div class="nav-divider"></div>
 
-        <!-- User Section -->
+        <!-- User Dashboard Links -->
         <a class="nav-link" href="{{ url_for('main.profile') }}">
             <i class="fa-solid fa-id-badge"></i> Profile Dashboard
         </a>
@@ -61,25 +104,33 @@
             {% endif %}
         {% endif %}
 
-        <!-- 3. Model Badge (Fills empty space & proves ML credentials) -->
-        <div style="margin: 0.75rem 0; padding: 12px 14px; background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 10px; width: 100%;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-brain"></i> ACTIVE ML PIPELINE
+        <!-- Simple Buyer Info Box -->
+        <div class="buyer-info-box">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 4px;">
+                <i class="fa-solid fa-shield-halved"></i> MUMBAI BUYER GUIDE
             </div>
-            <div style="color: var(--text); font-weight: 700; font-size: 0.92rem;">Gradient Boosting</div>
-            <div style="color: var(--text-muted); font-size: 0.78rem; margin-top: 2px;">Test R²: 86.5% | MMR Focus</div>
+            <div style="color: var(--text); font-weight: 700; font-size: 0.9rem;">52,000+ Verified Flats</div>
+            <div style="color: var(--text-muted); font-size: 0.78rem; margin-top: 2px;">Includes 6% Stamp Duty & EMI</div>
         </div>
 
-        <!-- 4. Session & Utility Footer (Cleanly anchored at bottom) -->
+        <!-- Bottom User & Theme Section -->
         <div class="nav-bottom-group">
             <button id="themeToggle" class="nav-link" style="background:none; border:none; width:100%; text-align:left; cursor:pointer; font-family:inherit; font-size:inherit; color:var(--text-muted);">
                 <i class="fa-solid fa-moon"></i> <span>Dark Mode</span>
             </button>
             <div class="nav-divider" style="margin: 0.25rem 0;"></div>
+
             {% if current_user.is_authenticated %}
-                <div class="nav-user-info">
-                    Signed in as <strong>{{ current_user.username }}</strong>
-                </div>
+                <!-- Signed in user with Logo -->
+                <a href="{{ url_for('main.profile') }}" class="user-profile-box">
+                    <div class="user-avatar-logo">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="nav-user-info" style="padding: 0;">
+                        <span style="display: block; font-size: 0.7rem; color: var(--text-muted);">Signed in as</span>
+                        <strong style="font-size: 0.88rem; color: var(--text);">{{ current_user.username }}</strong>
+                    </div>
+                </a>
                 <a class="nav-link" href="{{ url_for('auth.logout') }}" style="color: var(--danger, #ef4444);">
                     <i class="fa-solid fa-right-from-bracket"></i> Logout
                 </a>
@@ -117,22 +168,19 @@
     <div class="footer-inner">
         <div class="footer-brand">
             <h3><i class="fa-solid fa-house-signal"></i> PropVal Insights</h3>
-            <p>Data-driven real estate valuations powered by historical property listing data from across Mumbai.</p>
+            <p>Easy property price calculator, stamp duty & EMI breakdown, and area map for Mumbai homebuyers.</p>
             <a href="{{ url_for('main.index') }}#predictor" class="btn-primary" style="margin-top: 1rem; display: inline-flex; width: fit-content;">
                 <i class="fa-solid fa-bolt"></i> Get Valuation Now
             </a>
         </div>
-
         <div>
-            <h4>Links</h4>
+            <h4>Quick Links</h4>
             <div class="footer-links">
                 <a href="{{ url_for('main.how_it_works') }}"><i class="fa-solid fa-circle-question"></i> How It Works</a>
                 <a href="{{ url_for('main.about') }}"><i class="fa-solid fa-info-circle"></i> About</a>
-                {% if config.SOURCE_CODE_URL %}<a href="{{ config.SOURCE_CODE_URL }}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github"></i> Source Code</a>{% endif %}
-                {% if config.DATASET_URL %}<a href="{{ config.DATASET_URL }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-database"></i> Dataset</a>{% endif %}
+                <a href="{{ url_for('main.profile') }}"><i class="fa-solid fa-id-badge"></i> Profile Dashboard</a>
             </div>
         </div>
-        
         <div>
             <h4>Legal & Contact</h4>
             <div class="footer-links">
@@ -143,22 +191,20 @@
         </div>
     </div>
     <div class="footer-bottom">
-        <p>⚠️ <strong>Disclaimer:</strong> Predictions are statistical estimates based on historical data and are not official legal appraisals or financial advice.</p>
+        <p><strong>Disclaimer:</strong> Predictions are statistical estimates based on historical data and are not official legal appraisals or financial advice.</p>
         <p>&copy; 2026 PropVal Insights. All rights reserved.</p>
     </div>
 </footer>
 
 <script>
-    // 3-Dots Menu Toggle: Tap to open, tap again or outside to dismiss
+    // Mobile Menu Toggle
     const hamburger = document.getElementById('hamburger');
     const navbar    = document.getElementById('navbar');
     const toggleIcon = document.getElementById('menuToggleIcon');
-
     if (hamburger && navbar) {
         hamburger.addEventListener('click', (e) => {
             e.stopPropagation();
             const isOpen = navbar.classList.toggle('open');
-            hamburger.setAttribute('aria-expanded', String(isOpen));
             if (toggleIcon) {
                 toggleIcon.classList.replace(
                     isOpen ? 'fa-ellipsis-vertical' : 'fa-xmark',
@@ -166,37 +212,23 @@
                 );
             }
         });
-
         document.addEventListener('click', (e) => {
             if (navbar.classList.contains('open') && !navbar.contains(e.target)) {
                 navbar.classList.remove('open');
-                hamburger.setAttribute('aria-expanded', 'false');
                 if (toggleIcon) toggleIcon.classList.replace('fa-xmark', 'fa-ellipsis-vertical');
             }
         });
-
-        navbar.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => {
-                if (navbar.classList.contains('open')) {
-                    navbar.classList.remove('open');
-                    hamburger.setAttribute('aria-expanded', 'false');
-                    if (toggleIcon) toggleIcon.classList.replace('fa-xmark', 'fa-ellipsis-vertical');
-                }
-            });
-        });
     }
-    // Close flash alerts
+
+    // Dismiss Flash Alerts
     document.querySelectorAll('.alert-close').forEach(btn => {
         btn.addEventListener('click', () => btn.closest('.alert').remove());
     });
-    // Dark mode toggle
-    function safeStore(key, value) {
-        try { localStorage.setItem(key, value); } catch (e) { /* storage unavailable */ }
-    }
+
+    // Dark Mode Toggle
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = themeToggle ? themeToggle.querySelector('i') : null;
     const themeText = themeToggle ? themeToggle.querySelector('span') : null;
-
     function applyThemeState(isDark) {
         if (isDark) {
             document.documentElement.setAttribute('data-theme', 'dark');
@@ -207,31 +239,18 @@
             if (themeIcon) themeIcon.classList.replace('fa-sun', 'fa-moon');
             if (themeText) themeText.textContent = 'Dark Mode';
         }
-        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { isDark } }));
     }
-
     if (themeToggle) {
         if (document.documentElement.getAttribute('data-theme') === 'dark') {
-            if (themeIcon) themeIcon.classList.replace('fa-moon', 'fa-sun');
-            if (themeText) themeText.textContent = 'Light Mode';
+            applyThemeState(true);
         }
         themeToggle.addEventListener('click', () => {
-            const isDarkNow = document.documentElement.getAttribute('data-theme') === 'dark';
-            const willBeDark = !isDarkNow;
-            safeStore('theme', willBeDark ? 'dark' : 'light');
+            const willBeDark = document.documentElement.getAttribute('data-theme') !== 'dark';
+            try { localStorage.setItem('theme', willBeDark ? 'dark' : 'light'); } catch (e) {}
             applyThemeState(willBeDark);
-        });
-
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'theme') {
-                applyThemeState(e.newValue === 'dark');
-            }
         });
     }
 </script>
-
-
-
 {% block scripts %}{% endblock %}
 </body>
 </html>

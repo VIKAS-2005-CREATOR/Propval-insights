@@ -8,6 +8,7 @@ load_dotenv()
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_DIR = os.path.dirname(BASE_DIR)
+INSTANCE_DIR = os.environ.get('INSTANCE_DIR', os.path.join(PROJECT_DIR, 'instance'))
 
 
 def _dev_secret_key(path=None):
@@ -54,17 +55,9 @@ def _env_float(name, default):
         return float(default)
 
 
-INSTANCE_DIR = os.path.join(PROJECT_DIR, 'instance')
-
-
 def _database_uri():
     url = os.environ.get('DATABASE_URL')
     if url:
-        # Use psycopg 3 for common PostgreSQL URLs.
-        if url.startswith('postgres://'):
-            return url.replace('postgres://', 'postgresql+psycopg://', 1)
-        if url.startswith('postgresql://'):
-            return url.replace('postgresql://', 'postgresql+psycopg://', 1)
         return url
     return 'sqlite:///' + os.path.join(INSTANCE_DIR, 'app.db')
 

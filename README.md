@@ -51,15 +51,15 @@ The tests use an isolated test database and stub the model for deterministic pre
 
 ## Production / Render deployment checklist
 
-- Set `APP_ENV=production` and a strong, unique `SECRET_KEY` in the hosting provider's environment settings. Never put the secret in source control or share it in screenshots.
-- Configure `DATABASE_URL` to a managed PostgreSQL database for persistent user accounts and valuation history. The app supports the standard `DATABASE_URL` variable.
-- If you intentionally use SQLite instead, the database file defaults to `instance/app.db`. A normal Render service filesystem is ephemeral; use a persistent disk mounted at the exact directory used by `INSTANCE_DIR`, and confirm backups and persistence before relying on it. Do not switch database types without a migration/backup plan.
-- The app's default `AUTO_CREATE_DB=1` creates missing tables at startup; it is not a replacement for database migrations. Review migration state before changing this setting.
-- The default rate-limit store is in-memory. With multiple workers/instances, configure a shared store (for example Redis) using `RATELIMIT_STORAGE_URI`.
-- Use the production start command `gunicorn run:app` if that matches the Render service's configured entry point. Confirm the actual service settings before changing them.
-- After deployment, verify registration, login/logout, regular-user denial of `/admin`, predictions, valuation history, and the health endpoint. Check Render logs for startup errors and confirm the database survives a restart/redeploy.
-
-Render settings and existing database contents are not changed by repository edits. Back up production data before any database migration or administrator-account changes.
+- **Environment:** Python Web Service on [Render](https://render.com/).
+- **Build Command:** `pip install -r requirements.txt`
+- **Start Command:** `gunicorn run:app`
+- **Database:** SQLite is used by default (`instance/app.db`). To persist user accounts and valuation history across Render restarts/redeploys, you can attach a Render Persistent Disk mounted at `instance/` (or specify the path with `INSTANCE_DIR`).
+- **Environment Variables:**
+  - `APP_ENV`: Set to `production`
+  - `SECRET_KEY`: Set to a strong, random secret key (e.g., generated with `python -c "import secrets; print(secrets.token_hex(32))"`)
+- The app's default `AUTO_CREATE_DB=1` automatically creates missing SQLite tables at startup.
+- After deployment, verify predictions, price heatmap, valuation PDF generation, and the `/healthz` health endpoint.
 
 ## Model and estimate limitations
 

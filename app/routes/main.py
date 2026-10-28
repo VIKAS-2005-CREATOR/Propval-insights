@@ -4,7 +4,6 @@ from flask import (
 )
 from flask_login import current_user, login_required
 from sqlalchemy.exc import SQLAlchemyError
-
 from app.extensions import csrf, db, limiter
 from app.models import ValuationHistory
 from app.services import finance, predictor
@@ -13,25 +12,26 @@ main_bp = Blueprint('main', __name__)
 
 FORM_FIELDS = ('bhk', 'area', 'prop_type', 'region', 'status', 'age',
                'asking_price', 'transit_proximity')
+
 DEFAULTS = {
     'bhk': '2', 'area': '850', 'prop_type': 'Apartment', 'region': 'Andheri West',
     'status': 'Ready to move', 'age': 'New', 'asking_price': '', 'transit_proximity': 'standard',
 }
+
 SELECT_FIELDS = {
     'prop_type': 'types', 'region': 'regions', 'status': 'statuses', 'age': 'ages',
 }
+
 HISTORY_LIMIT = 200
 
 
 def _form_values(source, categories, submitted):
-    """Values used to fill the form (submitted input, or sensible defaults)."""
+    """Fill form with user input or default values."""
     values = {}
     for field in FORM_FIELDS:
         raw = (source.get(field) or '').strip()
         values[field] = raw if (submitted or raw) else DEFAULTS[field]
-
     if not submitted:
-        # Make sure default selections actually exist in the trained categories.
         for field, key in SELECT_FIELDS.items():
             options = categories.get(key) or []
             if options and values[field] not in options:
@@ -51,7 +51,6 @@ def _predict_from(values):
 def index():
     categories = predictor.get_categories()
     model_scores = predictor.get_scores()
-
     submitted = 'area' in request.args
     form = _form_values(request.args, categories, submitted)
 
@@ -63,15 +62,11 @@ def index():
     }
 
     if submitted:
-        # --- STEP 2: GRADIENT BOOSTING PREDICTION & INSIGHTS ---
         result = _predict_from(form)
         if 'error' in result:
-            # Shown inside the results panel; a banner at the top of the page
-            # would be scrolled out of view by the #predictor anchor.
             context['form_error'] = result['error']
         else:
             context.update(result)
-            # --- STEP 4 & 5: CALCULATE ON-ROAD ACQUISITION COST & 20-YR EMI ---
             context['cost'] = finance.get_quick_cost_summary(result['predicted_price'])
 
     return render_template('dashboard/index.html', **context)
@@ -80,8 +75,7 @@ def index():
 @main_bp.route('/predict', methods=['POST'])
 @limiter.limit(lambda: current_app.config['PREDICT_RATE_LIMIT'])
 def predict():
-    """Validate, store history, then redirect (Post/Redirect/Get)."""
-    # --- STEP 1: EXTRACT USER INPUTS & FORM DATA ---
+    """Validate inputs, save to user history if logged in, and redirect."""
     values = {field: (request.form.get(field) or '').strip() for field in FORM_FIELDS}
     result = _predict_from(values)
 
@@ -104,7 +98,6 @@ def predict():
             db.session.rollback()
             current_app.logger.exception('Could not save valuation history')
 
-    # Errors are reported by index(), which re-validates the same values.
     params = {key: value for key, value in values.items() if value}
     return redirect(url_for('main.index', _anchor='predictor', **cast(Any, params)))
 
@@ -112,11 +105,6 @@ def predict():
 @main_bp.route('/how-it-works')
 def how_it_works():
     return render_template('dashboard/how_it_works.html')
-
-
-@main_bp.route('/performance')
-def performance():
-    return render_template('dashboard/performance.html', model_scores=predictor.get_scores())
 
 
 @main_bp.route('/history')
@@ -141,9 +129,8 @@ def profile():
     all_valuations = current_user.valuations.order_by(ValuationHistory.timestamp.desc()).all()
     total_count = len(all_valuations)
     recent_valuations = all_valuations[:5]
-
     avg_price = (sum(v.predicted_price for v in all_valuations) / total_count) if total_count > 0 else None
-    
+
     top_region = None
     if total_count > 0:
         from collections import Counter
@@ -161,15 +148,14 @@ def profile():
     )
 
 
-@main_bp.route('/api/predict', methods=['POST']) # type: ignore
+@main_bp.route('/api/predict', methods=['POST'])  # type: ignore
 @csrf.exempt
 @limiter.limit(lambda: current_app.config['PREDICT_RATE_LIMIT'])
 def api_predict():
-    """JSON API. It is stateless and uses no cookies, so CSRF does not apply."""
+    """JSON API for predictions."""
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return jsonify(error='Send a JSON object as the request body.'), 400
-
     result = predictor.predict_price(
         data.get('bhk'), data.get('area'), data.get('prop_type'),
         data.get('region'), data.get('status'), data.get('age'),
@@ -180,6 +166,7 @@ def api_predict():
     return jsonify(result), (400 if 'error' in result else 200)
 
 
+@main_bp.route('/api/heatmap')
 @main_bp.route('/api/heatmap-data')
 @limiter.limit(lambda: current_app.config['HEATMAP_RATE_LIMIT'])
 def api_heatmap_data():
@@ -187,7 +174,6 @@ def api_heatmap_data():
     response = jsonify(predictor.get_heatmap_data())
     response.headers['Cache-Control'] = 'public, max-age=300'
     return response
-
 
 
 @main_bp.route('/healthz')
@@ -200,16 +186,17 @@ def about():
     categories = predictor.get_categories()
     num_regions = len(categories.get('regions', []))
     num_listings = sum(categories.get('region_counts', {}).values())
-
     context = {
         'num_regions': num_regions,
         'num_listings': num_listings,
     }
     return render_template('public/about.html', **context)
 
+
 @main_bp.route('/terms')
 def terms():
     return render_template('public/terms.html')
+
 
 @main_bp.route('/privacy')
 def privacy():

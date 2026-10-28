@@ -1,5 +1,4 @@
-/* Valuation page: map + heatmap, area slider, local history, charts, EMI.
- *
+/* Valuation page: map + heatmap, area slider, local history, and PDF export.
  * Server values arrive through <script type="application/json"> blocks
  * (#page-config, #d-price, #d-insights) so this file has no template syntax.
  */
@@ -11,24 +10,28 @@
         if (!el) return null;
         try { return JSON.parse(el.textContent); } catch (e) { return null; }
     };
+
     const config = readJson('page-config') || {};
     const basePrice = readJson('d-price');          // Crores, only after a valuation
     const insights = readJson('d-insights');
+
     const isHex = (value) => /^#[0-9a-fA-F]{6}$/.test(value);
     const inr = (value) => Math.round(value).toLocaleString('en-IN');
 
-    // ── Map (OpenStreetMap + Leaflet) ───────────────────────────────────
+    // 1. Map (OpenStreetMap + Leaflet)
     function initMap() {
         const mapEl = document.getElementById('mumbaiMap');
         if (!mapEl || typeof L === 'undefined') return;
 
         const defaultCenter = [19.0760, 72.8777];
         const map = L.map('mumbaiMap', { center: defaultCenter, zoom: 11, scrollWheelZoom: false });
+
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
         }).addTo(map);
-        // Wheel zoom only after the map was clicked, so page scrolling is not hijacked.
+
+        // Enable wheel zoom only after clicking on the map
         map.once('focus', () => map.scrollWheelZoom.enable());
 
         const regionSelect = document.getElementById('region');
@@ -74,7 +77,7 @@
             updateMap(name, true);
         }
 
-        // Coordinates for every region come from one JSON file.
+        // Load coordinates for all regions from JSON file
         fetch(config.coordinatesUrl)
             .then((r) => r.json())
             .then((data) => {
@@ -85,7 +88,7 @@
 
         if (regionSelect) regionSelect.addEventListener('change', (e) => updateMap(e.target.value, true));
 
-        // Clicking the map snaps to the nearest mapped region.
+        // Clicking on map selects the nearest Mumbai locality
         map.on('click', (e) => {
             let nearest = null;
             let best = Infinity;
@@ -96,7 +99,7 @@
             if (nearest) selectRegion(nearest);
         });
 
-        // Quick zone buttons
+        // Quick Zone Buttons
         const zones = {
             all:     { center: [19.0760, 72.8777], zoom: 11 },
             south:   { center: [18.9400, 72.8250], zoom: 13 },
@@ -114,7 +117,7 @@
             });
         });
 
-        // Price heatmap overlay
+        // Price Heatmap Overlay
         const layer = L.layerGroup();
         const heatBtn = document.getElementById('heatToggleBtn');
         const legend = document.getElementById('heatmapLegend');
@@ -144,7 +147,6 @@
                     radius, color, weight: 1.5, fillColor: color, fillOpacity: item.low_data ? 0.25 : 0.55,
                     dashArray: item.low_data ? '3 3' : null
                 });
-
                 const title = el('strong', { textContent: '📍 ' + item.region });
                 const tier = el('div', { className: 'map-popup-tier', textContent: item.label });
                 tier.style.color = color;
@@ -187,7 +189,7 @@
             expandBtn.addEventListener('click', () => {
                 mapDiv.classList.toggle('expanded');
                 expandBtn.classList.toggle('active');
-                
+
                 const icon = expandBtn.querySelector('i');
                 if (mapDiv.classList.contains('expanded')) {
                     icon.classList.replace('fa-expand', 'fa-compress');
@@ -196,8 +198,7 @@
                     icon.classList.replace('fa-compress', 'fa-expand');
                     expandBtn.title = 'Expand Map';
                 }
-                
-                // Allow CSS transition to complete before invalidating size
+
                 setTimeout(() => {
                     map.invalidateSize();
                 }, 350);
@@ -207,12 +208,13 @@
         setTimeout(() => map.invalidateSize(), 350);
     }
 
-    // ── Area slider <-> number input ────────────────────────────────────
+    // 2. Area Slider <-> Number Input Sync
     function initAreaSync() {
         const slider = document.getElementById('area-slider');
         const number = document.getElementById('area');
         const label = document.getElementById('areaLabel');
         if (!slider || !number) return;
+
         const show = (value) => { if (label) label.textContent = value; };
         slider.addEventListener('input', () => { number.value = slider.value; show(slider.value); });
         number.addEventListener('input', () => { slider.value = number.value; show(number.value); });
@@ -235,12 +237,10 @@
                     if (config) {
                         slider.min = config.min;
                         slider.max = config.max;
-                        
-                        // Optional: update the label for the minimum bound if it exists
+
                         const minLabel = slider.parentElement.querySelector('.range-ends span');
                         if (minLabel) minLabel.textContent = config.min + ' sq ft';
-                        
-                        // Set area to the typical default for that BHK (only if the user just clicked it, otherwise keep current value if initialized)
+
                         if (e.isTrusted) {
                             slider.value = config.value;
                             number.value = config.value;
@@ -258,7 +258,7 @@
         }
     }
 
-    // ── Submit button state ─────────────────────────────────────────────
+    // 3. Submit button state
     function initSubmitState() {
         const form = document.getElementById('valuationForm');
         const button = document.getElementById('submitBtn');
@@ -268,18 +268,16 @@
             button.disabled = true;
             button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calculating…';
         });
-        // Restore the button when the page comes back from the browser cache.
         window.addEventListener('pageshow', () => { button.disabled = false; button.innerHTML = label; });
     }
 
-    // ── PDF export (Fixed for gradient text, glassmorphism & fallback) ──
+    // 4. PDF export
     function initPdfExport() {
         const button = document.getElementById('exportPdfBtn');
         const panel = document.getElementById('resultsPanel');
         if (!button || !panel) return;
 
         button.addEventListener('click', () => {
-            // Ensure the cost breakdown accordion is expanded for the PDF
             const details = panel.querySelector('details');
             if (details) details.open = true;
 
@@ -308,10 +306,10 @@
         });
     }
 
-    // ── Local history (anonymous visitors only) ─────────────────────────
+    // 5. Local history (anonymous visitors only)
     function initLocalHistory() {
         const container = document.getElementById('localHistory');
-        if (!container) return;          // logged-in users see their saved history instead
+        if (!container) return;
         const KEY = 'propval_hist';
         const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } };
         const write = (items) => { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (e) { /* storage unavailable */ } };
@@ -347,7 +345,10 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        initMap(); initAreaSync(); initSubmitState(); initPdfExport();
+        initMap();
+        initAreaSync();
+        initSubmitState();
+        initPdfExport();
         initLocalHistory();
     });
 })();

@@ -1,6 +1,6 @@
 {
   "best_model": "Gradient Boosting",
-  "trained_at": "26 Oct 2026",
+  "trained_at": "28 Oct 2026",
   "models": {
     "Random Forest": 0.9284,
     "Gradient Boosting": 0.8942

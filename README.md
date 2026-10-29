@@ -11,7 +11,7 @@ app/
   config.py                  environment-driven settings
   models.py, cli.py          database models and Flask CLI commands
   routes/                    main.py, auth.py, admin.py
-  services/                  prediction, finance, and retraining logic
+  services/                  prediction and finance logic
   templates/ and static/     pages, CSS, JavaScript, and map data
 ml_pipeline/train.py         model training pipeline
 ml_pipeline/artifacts/       trained model and evaluation metrics

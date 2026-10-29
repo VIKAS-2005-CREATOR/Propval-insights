@@ -79,7 +79,7 @@ class Config:
     PORT = int(os.environ.get('PORT', '5000'))
     DEBUG_MODE = _env_flag('FLASK_DEBUG', default=not IS_PRODUCTION) and not IS_PRODUCTION
 
-    # Writable folder for the SQLite file and the retrain state/lock files.
+    # Writable folder for the SQLite file.
     INSTANCE_DIR = INSTANCE_DIR
 
     # Database
@@ -129,10 +129,6 @@ class Config:
     REGISTRATION_FEE_RATE = _env_float('REGISTRATION_FEE_RATE', 0.01)
     REGISTRATION_FEE_CAP = _env_float('REGISTRATION_FEE_CAP', 30000)
     LEGAL_FEE_ESTIMATE = _env_float('LEGAL_FEE_ESTIMATE', 35000)
-
-    # Retraining from the admin page
-    RETRAIN_TIMEOUT_SECONDS = int(_env_float('RETRAIN_TIMEOUT_SECONDS', 1800))
-    RETRAIN_N_JOBS = os.environ.get('RETRAIN_N_JOBS', '2')
 
     # Optional links shown in the footer
     SOURCE_CODE_URL = os.environ.get('SOURCE_CODE_URL', '')

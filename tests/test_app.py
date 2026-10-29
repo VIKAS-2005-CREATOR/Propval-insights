@@ -192,7 +192,7 @@ def test_heatmap_api_returns_tiers_and_regions(client):
     assert alias_response.status_code == 200
 
 
-# ---- admin retrain ------------------------------------------------------------
+# ---- admin panel --------------------------------------------------------------
 
 def make_admin(app, username='boss'):
     with app.app_context():
@@ -202,35 +202,13 @@ def make_admin(app, username='boss'):
         db.session.commit()
 
 
-def test_retrain_requires_admin(app, client):
-    assert client.post('/admin/retrain').status_code == 302          # not logged in
-    register(client, username='regular', email='reg@example.com')
-    login(client, username='regular')
-    assert client.post('/admin/retrain').status_code == 403
-    assert client.get('/admin/retrain-status').status_code == 403
-
-
-def test_retrain_start_and_conflict(app, client, monkeypatch):
-    from app.routes import admin as admin_routes
+def test_admin_page_accessible_by_admin(app, client):
     make_admin(app)
     login(client, username='boss')
-
-    monkeypatch.setattr(admin_routes.retrain, 'start_retrain', lambda **kwargs: (True, 'Retraining started.'))
-    assert client.post('/admin/retrain').status_code == 202
-
-    monkeypatch.setattr(admin_routes.retrain, 'start_retrain',
-                        lambda **kwargs: (False, 'A retrain is already running.'))
-    conflict = client.post('/admin/retrain')
-    assert conflict.status_code == 409 and 'already running' in conflict.get_json()['error']
-
-
-def test_retrain_status_and_admin_page(app, client):
-    make_admin(app)
-    login(client, username='boss')
-    status = client.get('/admin/retrain-status').get_json()
-    assert status['retrain_state']['status'] in ('idle', 'running', 'completed', 'failed')
     page = client.get('/admin')
-    assert page.status_code == 200 and b'Retrain Model Pipeline' in page.data
+    assert page.status_code == 200
+    assert b'Admin Dashboard' in page.data
+    assert b'Machine Learning Engine' in page.data
 
 
 # ---- security token (CSRF) behaviour -------------------------------------------

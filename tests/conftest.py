@@ -26,7 +26,7 @@ class TestConfig(Config):
     SCORES_PATH = '/nonexistent/model_scores.json'
     CATEGORIES_PATH = '/nonexistent/categories.json'
     DATA_PATH = '/nonexistent/data.csv'
-    INSTANCE_DIR = tempfile.mkdtemp()      # retrain state/lock files go here
+    INSTANCE_DIR = tempfile.mkdtemp()      # test instance dir
 
 
 class FakeModel:

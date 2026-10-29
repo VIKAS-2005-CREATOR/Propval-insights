@@ -14,7 +14,7 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # SQLite file and retrain state/lock files live here.
+    # SQLite database file lives here.
     os.makedirs(app.config['INSTANCE_DIR'], exist_ok=True)
 
     # Initialize extensions
